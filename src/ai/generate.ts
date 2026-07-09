@@ -13,7 +13,6 @@ const MODELS = [
 ];
 
 const TIMEOUT_MS = 15000;
-const MAX_PARSE_RETRY = 2;
 
 export async function generateWithLLM(input: PlannerInput, region: RegionData): Promise<Course | null> {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -30,39 +29,41 @@ export async function generateWithLLM(input: PlannerInput, region: RegionData): 
 }
 
 async function tryModel(apiKey: string, model: string, sys: string, usr: string): Promise<Course | null> {
-  for (let attempt = 0; attempt < MAX_PARSE_RETRY; attempt++) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    try {
-      const res = await fetch(OPENROUTER_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: sys },
-            { role: "user", content: usr },
-          ],
-          temperature: 0.7,
-        }),
-        signal: controller.signal,
-      });
-      if (!res.ok) continue; // 다음 모델로
-      const json = (await res.json()) as any;
-      const content: string = json?.choices?.[0]?.message?.content ?? "";
-      const parsed = safeParseContent(content);
-      if (!parsed) continue;
-      const result = CourseSchema.safeParse(parsed);
-      if (result.success) return result.data;
-    } catch {
-      // 타임아웃/네트워크 → 다음 모델
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: usr },
+        ],
+        temperature: 0.7,
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      // 401/429/5xx 등 → 호출자(모델 체인)가 다음 모델로 넘기게 함
+      console.error(`[LLM] ${model} HTTP ${res.status}`);
       return null;
-    } finally {
-      clearTimeout(timer);
     }
+    const json = (await res.json()) as any;
+    const content: string = json?.choices?.[0]?.message?.content ?? "";
+    const parsed = safeParseContent(content);
+    if (!parsed) return null;
+    const result = CourseSchema.safeParse(parsed);
+    return result.success ? result.data : null;
+  } catch (e) {
+    // 타임아웃/네트워크 → 다음 모델
+    console.error(`[LLM] ${model} error`, e);
+    return null;
+  } finally {
+    clearTimeout(timer);
   }
-  return null;
 }

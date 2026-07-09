@@ -18,8 +18,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# auto-generated (tourAPI 동기화 결과 — CI에서 생성)
-src/data/seed.enriched.ts
+# auto-generated (tourAPI 동기화 결과 — CI에서 갱신, git에 포함)
+# src/data/seed.enriched.ts  ← 의도적으로 추적(주간 자동 보강 커밋)
 
 .env
 .env*.local

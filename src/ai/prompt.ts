@@ -24,7 +24,21 @@ export function systemPrompt(): string {
 - 취향(조용한/가성비/프리미엄/가족/혼자/야외온천/음식중심)을 반영
 - 한글, 친근하고 실용적인 어투
 
-출력은 주어진 JSON 스키마만 준수하세요. 다른 텍스트 금지.`;
+반드시 아래 JSON 형식으로만 출력하세요. 다른 텍스트(설명, 인사말)는 절대 금지, 코드펜스(\`\`\`)도 사용하지 마세요:
+{
+  "region": "지역명",
+  "days": [
+    {
+      "day": 1,
+      "theme": "하루 주제",
+      "stops": [
+        { "time": "10:00", "placeId": "장소ID", "title": "장소명", "reason": "이유", "tip": "팁" }
+      ]
+    }
+  ],
+  "estCostKrw": 0,
+  "summary": "코스 한 줄 요약"
+}`;
 }
 
 export function userPrompt(input: PlannerInput, region: RegionData): string {
@@ -33,7 +47,7 @@ export function userPrompt(input: PlannerInput, region: RegionData): string {
     : "없음";
   const note = input.note?.trim() || "없음";
 
-  return `[\uC785력]
+  return `[입력]
 지역: ${region.name}
 기간: ${input.days}일
 취향: ${prefs}
@@ -42,52 +56,6 @@ export function userPrompt(input: PlannerInput, region: RegionData): string {
 [장소 데이터]
 ${JSON.stringify(region.places, null, 2)}
 
-위 데이터만 사용해 ${input.days}일 코스를 만들고, 지정된 JSON 스키마로 출력하세요.
+위 데이터만 사용해 ${input.days}일 코스를 만들고, 지정된 JSON 형식으로 출력하세요.
 estCostKrw는 1인 기준 예상 비용(원)으로 계산하세요.`;
 }
-
-// OpenRouter response_format 용 JSON 스키마
-export const courseJsonSchema = {
-  type: "json_schema",
-  json_schema: {
-    name: "course",
-    strict: true,
-    schema: {
-      type: "object",
-      properties: {
-        region: { type: "string" },
-        days: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              day: { type: "integer" },
-              theme: { type: "string" },
-              stops: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    time: { type: "string" },
-                    placeId: { type: "string" },
-                    title: { type: "string" },
-                    reason: { type: "string" },
-                    tip: { type: "string" },
-                  },
-                  required: ["time", "title", "reason"],
-                  additionalProperties: false,
-                },
-              },
-            },
-            required: ["day", "theme", "stops"],
-            additionalProperties: false,
-          },
-        },
-        estCostKrw: { type: "integer" },
-        summary: { type: "string" },
-      },
-      required: ["region", "days", "estCostKrw", "summary"],
-      additionalProperties: false,
-    },
-  },
-};

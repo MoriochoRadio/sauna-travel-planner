@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { PlannerInputSchema } from "@/data/schema";
 import { generateCourse } from "@/ai/engine";
 
+// 전체 응답 하드 타임아웃 (무료 모델 레이트리밋 시 폴백으로 신속 전환)
+const HARD_TIMEOUT_MS = 10000;
+
 export async function POST(req: NextRequest) {
   let body: unknown;
   try {
@@ -21,10 +24,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: code }, { status: 400 });
   }
 
+  // 타임아웃 시 폴백 코스로 즉시 응답
+  const timeout = new Promise<null>((_, reject) =>
+    setTimeout(() => reject(new Error("timeout")), HARD_TIMEOUT_MS)
+  );
+
   try {
-    const course = await generateCourse(parsed.data);
+    const course = await Promise.race([generateCourse(parsed.data), timeout]);
+    if (!course) throw new Error("empty");
     return NextResponse.json(course);
-  } catch (e) {
-    return NextResponse.json({ error: "generation_failed" }, { status: 500 });
+  } catch {
+    // 타임아웃/실패 → 폴백 코스 생성
+    try {
+      const { fallbackCourse } = await import("@/ai/fallback");
+      const { getRegion } = await import("@/data/seed");
+      const region = getRegion(parsed.data.region);
+      if (!region) return NextResponse.json({ error: "unknown_region" }, { status: 400 });
+      const fb = fallbackCourse(parsed.data, region);
+      return NextResponse.json({ ...fb, usedFallback: true });
+    } catch {
+      return NextResponse.json({ error: "generation_failed" }, { status: 500 });
+    }
   }
 }

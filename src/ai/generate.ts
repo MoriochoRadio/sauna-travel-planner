@@ -13,8 +13,8 @@ const MODELS = [
   "meta-llama/llama-3.2-3b-instruct:free",
 ];
 
-const TIMEOUT_MS = 20000;
-const MAX_BACKOFF_RETRY = 2; // 429 시 모델당 1회 backoff 재시도
+const TIMEOUT_MS = 10000;
+const MAX_BACKOFF_RETRY = 1; // 429 시 모델당 1회 짧은 backoff
 
 export async function generateWithLLM(input: PlannerInput, region: RegionData): Promise<Course | null> {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -29,7 +29,7 @@ export async function generateWithLLM(input: PlannerInput, region: RegionData): 
 
     // 429 rate-limit일 수 있으니 잠깐 대기 후 1회 재시도
     for (let i = 0; i < MAX_BACKOFF_RETRY; i++) {
-      await sleep(3000 * (i + 1));
+      await sleep(1500 * (i + 1));
       course = await tryModel(apiKey, model, sys, usr);
       if (course) return course;
     }

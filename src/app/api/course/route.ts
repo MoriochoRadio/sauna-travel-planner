@@ -29,6 +29,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: code }, { status: 400 });
   }
 
+  // 키가 없거나 CI 환경(rate-limit 불확실)에서는 LLM 호출을 건너뛰고
+  // 즉시 폴백 코스로 응답 — 10초 타임아웃 낭비 방지 + E2E 결정론적 수행
+  const useLLM = !!process.env.OPENROUTER_API_KEY && !process.env.CI;
+  if (!useLLM) {
+    try {
+      const { fallbackCourse } = await import("@/ai/fallback");
+      const { getRegion } = await import("@/data/seed");
+      const region = getRegion(parsed.data.region);
+      if (!region) return NextResponse.json({ error: "unknown_region" }, { status: 400 });
+      const fb = fallbackCourse(parsed.data, region);
+      return NextResponse.json({ ...fb, usedFallback: true });
+    } catch {
+      return NextResponse.json({ error: "generation_failed" }, { status: 500 });
+    }
+  }
+
   // 타임아웃 시 폴백 코스로 즉시 응답
   const timeout = new Promise<null>((_, reject) =>
     setTimeout(() => reject(new Error("timeout")), HARD_TIMEOUT_MS)

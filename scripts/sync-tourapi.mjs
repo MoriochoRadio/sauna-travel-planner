@@ -19,8 +19,6 @@ const REGIONS = [
   { id: "jeju", areaCode: "39" },
 ];
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 async function fetchAll(areaCode, contentTypeId) {
   const out = [];
   for (let page = 1; page <= 5; page++) {
@@ -40,19 +38,7 @@ async function fetchAll(areaCode, contentTypeId) {
   return out;
 }
 
-// 개별 상세 (좌표/홈페이지/소개) — rate-limit 회피용 약간의 delay
-async function fetchDetail(contentId) {
-  const qs = new URLSearchParams({
-    serviceKey: KEY, MobileOS: "ETC", MobileApp: "saunaplanner", _type: "json",
-    contentId, contentTypeId: "32",
-  });
-  const res = await fetch(`https://apis.data.go.kr/B551011/KorService2/detailCommon2?${qs}`);
-  if (!res.ok) return null;
-  const json = await res.json();
-  const it = json?.response?.body?.items?.item;
-  return Array.isArray(it) ? it[0] : it;
-}
-
+// areaBasedList2 응답에 mapx/mapy/homepage가 이미 포함되므로 detailCommon2 호출 불필요
 const SAUNA_KW = ["온천", "사우나", "찜질", "스파", "목욕", "욕장", "찜질방", "hotspring", "spa", "대온천"];
 
 // tourAPI raw item → 우리 도메인 Place 객체로 매핑
@@ -117,17 +103,17 @@ async function collect() {
       .slice(0, 8)
       .map((i, idx) => toPlace(i, r.id, "attraction", idx + 1));
 
-    // 숙소: 실데이터 + onsen/sauna 추정
+    // 숙소: 실데이터 + onsen/sauna 추정 (목록 응답의 homepage/overview 활용)
     const seenStay = new Set();
     const stayPlaces = [];
     for (const i of stay.filter((x) => x.title && !seenStay.has(x.title) && seenStay.add(x.title)).slice(0, 10)) {
-      const detail = await fetchDetail(i.contentid).catch(() => null);
-      await sleep(80); // tourAPI rate-limit 완화
-      const blob = `${i.title} ${(detail?.overview || "")}`.toLowerCase();
+      const blob = `${i.title} ${(i.overview || "")}`.toLowerCase();
       const hasOnsen = SAUNA_KW.some((k) => blob.includes(k.toLowerCase()));
-      const place = toPlace({ ...i, ...(detail || {}) }, r.id, "lodging", stayPlaces.length + 1);
+      const place = toPlace(i, r.id, "lodging", stayPlaces.length + 1);
       place.hasOnsen = hasOnsen || undefined;
       place.hasSauna = blob.includes("사우나") || blob.includes("찜질") || undefined;
+      // homepage는 목록 응답에 이미 있음
+      place.homepage = i.homepage ? stripTags(i.homepage) : undefined;
       stayPlaces.push(place);
     }
 

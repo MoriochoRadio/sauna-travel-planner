@@ -25,7 +25,6 @@ async function fetchAll(areaCode, contentTypeId) {
     const qs = new URLSearchParams({
       serviceKey: KEY, MobileOS: "ETC", MobileApp: "saunaplanner", _type: "json",
       numOfRows: "100", pageNo: String(page), areaCode, contentTypeId,
-      defaultYN: "Y", overviewYN: "Y", mapXY: "Y", // 좌표/홈페이지/소개 포함 요청
     });
     const res = await fetch(`https://apis.data.go.kr/B551011/KorService2/areaBasedList2?${qs}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

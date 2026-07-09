@@ -6,13 +6,15 @@ import { safeParseContent } from "./parse";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 // 무료 모델 폴백 체인 (비용 0, OpenRouter :free)
+// 우선순위: 실제 동작 확인된 모델 → 품질 좋은 모델 → 경량 모델
 const MODELS = [
+  "openai/gpt-oss-20b:free",
   "nousresearch/hermes-3-llama-3.1-405b:free",
-  "meta-llama/llama-3.1-8b-instruct:free",
-  "qwen/qwen2.5-72b-instruct:free",
+  "meta-llama/llama-3.2-3b-instruct:free",
 ];
 
-const TIMEOUT_MS = 15000;
+const TIMEOUT_MS = 20000;
+const MAX_BACKOFF_RETRY = 2; // 429 시 모델당 1회 backoff 재시도
 
 export async function generateWithLLM(input: PlannerInput, region: RegionData): Promise<Course | null> {
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -22,8 +24,15 @@ export async function generateWithLLM(input: PlannerInput, region: RegionData): 
   const usr = userPrompt(input, region);
 
   for (const model of MODELS) {
-    const course = await tryModel(apiKey, model, sys, usr);
+    let course = await tryModel(apiKey, model, sys, usr);
     if (course) return course;
+
+    // 429 rate-limit일 수 있으니 잠깐 대기 후 1회 재시도
+    for (let i = 0; i < MAX_BACKOFF_RETRY; i++) {
+      await sleep(3000 * (i + 1));
+      course = await tryModel(apiKey, model, sys, usr);
+      if (course) return course;
+    }
   }
   return null;
 }
@@ -45,13 +54,13 @@ async function tryModel(apiKey: string, model: string, sys: string, usr: string)
           { role: "user", content: usr },
         ],
         temperature: 0.7,
+        max_tokens: 1500,
       }),
       signal: controller.signal,
     });
     if (!res.ok) {
-      // 401/429/5xx 등 → 호출자(모델 체인)가 다음 모델로 넘기게 함
       console.error(`[LLM] ${model} HTTP ${res.status}`);
-      return null;
+      return null; // 호출자가 다음 모델로
     }
     const json = (await res.json()) as any;
     const content: string = json?.choices?.[0]?.message?.content ?? "";
@@ -60,10 +69,13 @@ async function tryModel(apiKey: string, model: string, sys: string, usr: string)
     const result = CourseSchema.safeParse(parsed);
     return result.success ? result.data : null;
   } catch (e) {
-    // 타임아웃/네트워크 → 다음 모델
     console.error(`[LLM] ${model} error`, e);
     return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }

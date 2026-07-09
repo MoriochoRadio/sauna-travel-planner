@@ -7,6 +7,11 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:3939",
     headless: true,
+    launchOptions: {
+      executablePath:
+        process.env.PW_EXECUTABLE ??
+        `${process.env.LOCALAPPDATA}/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-win64/chrome-headless-shell.exe`,
+    },
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },

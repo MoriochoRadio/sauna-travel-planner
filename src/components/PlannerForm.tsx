@@ -11,6 +11,10 @@ const REGIONS = [
   { id: "gangwon", name: "강원" },
   { id: "gyeongju", name: "경주" },
   { id: "jeju", name: "제주" },
+  { id: "incheon", name: "인천" },
+  { id: "daejeon", name: "대전" },
+  { id: "gwangju", name: "광주" },
+  { id: "daegu", name: "대구" },
 ];
 
 const PREFS: { id: Preference; label: string }[] = [

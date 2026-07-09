@@ -1,6 +1,5 @@
 import type { RegionData, Place } from "@/data/schema";
-
-type CorePlace = Place;
+import { MapEmbed } from "./MapEmbed";
 
 const TYPE_LABEL: Record<string, string> = {
   sauna: "사우나",
@@ -16,6 +15,21 @@ const TYPE_COLOR: Record<string, string> = {
   lodging: "bg-amber-100 text-amber-700",
 };
 
+// 카카오맵 좌표 기반 링크
+function kakaoMapUrl(p: Place): string {
+  if (typeof p.lat === "number" && typeof p.lng === "number") {
+    return `https://map.kakao.com/?lat=${p.lat}&lng=${p.lng}&urlLevel=3`;
+  }
+  return `https://map.kakao.com/?q=${encodeURIComponent(p.name + " " + p.city)}`;
+}
+// 네이버맵 좌표 기반 링크
+function naverMapUrl(p: Place): string {
+  if (typeof p.lat === "number" && typeof p.lng === "number") {
+    return `https://map.naver.com/v5/search/${p.lat},${p.lng}`;
+  }
+  return `https://map.naver.com/v5/search/${encodeURIComponent(p.name + " " + p.city)}`;
+}
+
 export function SaunaMap({
   region,
   selectedId,
@@ -23,9 +37,8 @@ export function SaunaMap({
 }: {
   region: RegionData;
   selectedId?: string;
-  onSelect: (p: CorePlace) => void;
+  onSelect: (p: Place) => void;
 }) {
-  // 핵심 장소만 (사우나/온천/찜질방/숙소)
   const core = region.places.filter((p) =>
     ["sauna", "jjimjilbang", "spa", "lodging"].includes(p.type)
   );
@@ -35,59 +48,66 @@ export function SaunaMap({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {core.map((p) => {
-        const isSel = p.id === selectedId;
-        const facilities = [
-          p.type === "lodging" && p.hasOnsen ? "온천 보유" : null,
-          p.type === "lodging" && p.hasSauna ? "사우나 보유" : null,
-        ].filter(Boolean) as string[];
-        return (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => onSelect(p)}
-            aria-pressed={isSel}
-            className={`text-left card p-4 border-2 transition ${
-              isSel ? "border-onsen ring-2 ring-onsen/40" : "border-transparent hover:border-onsen/50"
-            }`}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold leading-snug">{p.name}</h3>
-              <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${TYPE_COLOR[p.type] ?? "bg-gray-100"}`}>
-                {TYPE_LABEL[p.type] ?? p.type}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">{p.city}</p>
-            <p className="text-sm mt-2 text-gray-700 line-clamp-2">{p.summary}</p>
+    <div className="space-y-4">
+      <MapEmbed places={core} selectedId={selectedId} />
 
-            {facilities.length > 0 && (
-              <div className="flex gap-1 mt-2 flex-wrap">
-                {facilities.map((f) => (
-                  <span key={f} className="text-[11px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">
-                    {f}
-                  </span>
-                ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {core.map((p) => {
+          const isSel = p.id === selectedId;
+          const facilities = [
+            p.type === "lodging" && p.hasOnsen ? "온천 보유" : null,
+            p.type === "lodging" && p.hasSauna ? "사우나 보유" : null,
+          ].filter(Boolean) as string[];
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onSelect(p)}
+              aria-pressed={isSel}
+              className={`text-left card p-4 border-2 transition ${
+                isSel ? "border-onsen ring-2 ring-onsen/40" : "border-transparent hover:border-onsen/50"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-semibold leading-snug">{p.name}</h3>
+                <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${TYPE_COLOR[p.type] ?? "bg-gray-100"}`}>
+                  {TYPE_LABEL[p.type] ?? p.type}
+                </span>
               </div>
-            )}
+              <p className="text-xs text-gray-500 mt-1">{p.city}{p.address ? ` · ${p.address}` : ""}</p>
+              <p className="text-sm mt-2 text-gray-700 line-clamp-2">{p.summary}</p>
 
-            <div className="flex items-center justify-between mt-3">
-              <span className="text-xs text-onsen font-medium">
-                {isSel ? "✓ 선택됨" : "이 사우나로 코스 짜기"}
-              </span>
-              <a
-                href={`https://map.kakao.com/?q=${encodeURIComponent(p.name + " " + p.city)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-xs text-gray-500 underline"
-              >
-                지도에서 보기
-              </a>
-            </div>
-          </button>
-        );
-      })}
+              {facilities.length > 0 && (
+                <div className="flex gap-1 mt-2 flex-wrap">
+                  {facilities.map((f) => (
+                    <span key={f} className="text-[11px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">{f}</span>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs">
+                {p.tel && <span className="text-gray-500">☎ {p.tel}</span>}
+                {p.homepage && (
+                  <a href={p.homepage} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                     className="text-gray-500 underline">홈페이지</a>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between mt-3">
+                <span className="text-xs text-onsen font-medium">
+                  {isSel ? "✓ 선택됨" : "이 사우나로 코스 짜기"}
+                </span>
+                <span className="flex gap-2 text-xs">
+                  <a href={kakaoMapUrl(p)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                     className="text-gray-500 underline">카카오맵</a>
+                  <a href={naverMapUrl(p)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                     className="text-gray-500 underline">네이버맵</a>
+                </span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

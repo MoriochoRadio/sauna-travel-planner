@@ -39,6 +39,11 @@ export const PlaceSchema = z.object({
   // 숙소(lodging)가 보유한 온천/사우나 시설
   hasOnsen: z.boolean().optional(),            // 노천/실내 온천 보유
   hasSauna: z.boolean().optional(),            // 사우나/찜질방 보유
+  // 세부 정보 (tourAPI 실데이터)
+  lat: z.number().optional(),                  // 위도
+  lng: z.number().optional(),                  // 경도
+  homepage: z.string().url().optional(),       // 공식 홈페이지
+  tel: z.string().optional(),                  // 전화번호
 });
 export type Place = z.infer<typeof PlaceSchema>;
 

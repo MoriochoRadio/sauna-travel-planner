@@ -1,5 +1,5 @@
-// tourAPI 동기화 스크립트 (하이브리드 전략)
-// 사우나/온천 = curated seed 유지, 맛집/볼거리 = tourAPI 보강
+// tourAPI 동기화 스크립트 (하이브리드 + 실데이터 상세)
+// 사우나/온천 = curated seed 유지, 맛집/볼거리/숙소 = tourAPI 실데이터 보강
 // 실행: TOURAPI_KEY=xxx node scripts/sync-tourapi.mjs
 // 결과: src/data/seed.enriched.ts 생성 (실사용 Place[] + 요약)
 import { writeFileSync } from "node:fs";
@@ -18,6 +18,8 @@ const REGIONS = [
   { id: "gangwon", areaCode: "32" }, { id: "gyeongju", areaCode: "35" },
   { id: "jeju", areaCode: "39" },
 ];
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchAll(areaCode, contentTypeId) {
   const out = [];
@@ -38,64 +40,106 @@ async function fetchAll(areaCode, contentTypeId) {
   return out;
 }
 
-// 사우나 키워드 — 볼거리에서 사우나계 제외용(하이브리드: 사우나는 curated 유지)
-const SAUNA_KW = ["온천", "사우나", "찜질", "스파", "목욕", "욕장", "찜질방"];
+// 개별 상세 (좌표/홈페이지/소개) — rate-limit 회피용 약간의 delay
+async function fetchDetail(contentId) {
+  const qs = new URLSearchParams({
+    serviceKey: KEY, MobileOS: "ETC", MobileApp: "saunaplanner", _type: "json",
+    contentId, contentTypeId: "32",
+  });
+  const res = await fetch(`https://apis.data.go.kr/B551011/KorService2/detailCommon2?${qs}`);
+  if (!res.ok) return null;
+  const json = await res.json();
+  const it = json?.response?.body?.items?.item;
+  return Array.isArray(it) ? it[0] : it;
+}
+
+const SAUNA_KW = ["온천", "사우나", "찜질", "스파", "목욕", "욕장", "찜질방", "hotspring", "spa", "대온천"];
 
 // tourAPI raw item → 우리 도메인 Place 객체로 매핑
-// tourAPI에는 priceLevel/tags/summary 등 도메인 필드가 없으므로 합리적 기본값 부여.
 function toPlace(item, regionId, type, idx) {
   const addr = (item.addr1 || "").trim();
-  // 시/군/구 추출 (예: "서울특별시 중구 ..." → "서울 중구")
   const city = addr.split(/\s+/).slice(0, 2).join(" ") || regionId;
   const tel = (item.tel || "").trim();
   return {
-    id: `${regionId}-${type === "restaurant" ? "food" : "att"}-api-${idx}`,
+    id: `${regionId}-${type === "restaurant" ? "food" : type === "lodging" ? "stay" : "att"}-api-${idx}`,
     name: item.title.trim(),
     type,
     region: regionId,
     city,
     summary: type === "restaurant"
       ? "tourAPI 등록 맛집 — 사우나 전후 식사 코스"
+      : type === "lodging"
+      ? "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요"
       : "tourAPI 등록 볼거리 — 사우나 사이 완충 코스",
-    tags: type === "restaurant" ? ["tourAPI", "맛집"] : ["tourAPI", "볼거리"],
+    tags: type === "restaurant" ? ["tourAPI", "맛집"] : type === "lodging" ? ["tourAPI", "숙소"] : ["tourAPI", "볼거리"],
     priceLevel: "mid",
-    avgDurationMin: type === "restaurant" ? 60 : 60,
+    avgDurationMin: type === "lodging" ? 480 : 60,
+    address: addr || undefined,
+    url: type === "lodging" ? (item.homepage ? stripTags(item.homepage) : undefined) : undefined,
+    openHours: type === "lodging" ? "24시간" : undefined,
     highlights: [addr || "주소 정보 tourAPI 제공", tel ? `☎ ${tel}` : "현장 확인 권장"].filter(Boolean),
     source: "tourapi",
+    lat: item.mapy ? Number(item.mapy) : undefined,
+    lng: item.mapx ? Number(item.mapx) : undefined,
+    homepage: type === "lodging" && item.homepage ? stripTags(item.homepage) : undefined,
+    tel: tel || undefined,
   };
+}
+
+function stripTags(s) {
+  if (!s) return undefined;
+  // homepage는 종종 <a href="...">...</a> 형태 — href 추출
+  const m = s.match(/href=["']([^"']+)["']/i);
+  if (m) return m[1];
+  return s.replace(/<[^>]+>/g, "").trim() || undefined;
 }
 
 async function collect() {
   const stats = [];
-  const enrichedPlaces = {}; // regionId -> Place[]
+  const enrichedPlaces = {};
   for (const r of REGIONS) {
-    let food = [], attr = [];
+    let food = [], attr = [], stay = [];
     try { food = await fetchAll(r.areaCode, "39"); } catch (e) { console.warn(`${r.id} food 실패`, e.message); }
     try { attr = await fetchAll(r.areaCode, "12"); } catch (e) { console.warn(`${r.id} attr 실패`, e.message); }
+    try { stay = await fetchAll(r.areaCode, "32"); } catch (e) { console.warn(`${r.id} stay 실패`, e.message); }
 
-    // 볼거리에서 사우나계 제외 (하이브리드 원칙)
-    const attrFiltered = attr.filter((i) => !SAUNA_KW.some((k) => (i.title || "").includes(k)));
+    const attrFiltered = attr.filter((i) => !SAUNA_KW.some((k) => (i.title || "").toLowerCase().includes(k.toLowerCase())));
 
-    // 실사용: 각 타입 상위 8개를 Place 객체로 (중복 title 제거)
     const seenFood = new Set();
     const foodPlaces = food
       .filter((i) => i.title && !seenFood.has(i.title) && seenFood.add(i.title))
       .slice(0, 8)
       .map((i, idx) => toPlace(i, r.id, "restaurant", idx + 1));
+
     const seenAttr = new Set();
     const attrPlaces = attrFiltered
       .filter((i) => i.title && !seenAttr.has(i.title) && seenAttr.add(i.title))
       .slice(0, 8)
       .map((i, idx) => toPlace(i, r.id, "attraction", idx + 1));
 
-    enrichedPlaces[r.id] = [...foodPlaces, ...attrPlaces];
+    // 숙소: 실데이터 + onsen/sauna 추정
+    const seenStay = new Set();
+    const stayPlaces = [];
+    for (const i of stay.filter((x) => x.title && !seenStay.has(x.title) && seenStay.add(x.title)).slice(0, 10)) {
+      const detail = await fetchDetail(i.contentid).catch(() => null);
+      await sleep(80); // tourAPI rate-limit 완화
+      const blob = `${i.title} ${(detail?.overview || "")}`.toLowerCase();
+      const hasOnsen = SAUNA_KW.some((k) => blob.includes(k.toLowerCase()));
+      const place = toPlace({ ...i, ...(detail || {}) }, r.id, "lodging", stayPlaces.length + 1);
+      place.hasOnsen = hasOnsen || undefined;
+      place.hasSauna = blob.includes("사우나") || blob.includes("찜질") || undefined;
+      stayPlaces.push(place);
+    }
+
+    enrichedPlaces[r.id] = [...foodPlaces, ...attrPlaces, ...stayPlaces];
 
     stats.push({
       region: r.id,
       foodCount: food.length,
       attrCount: attrFiltered.length,
-      foodTitles: foodPlaces.slice(0, 5).map((p) => p.name),
-      attrTitles: attrPlaces.slice(0, 5).map((p) => p.name),
+      stayCount: stay.length,
+      stayWithOnsen: stayPlaces.filter((p) => p.hasOnsen).length,
+      stayTitles: stayPlaces.slice(0, 5).map((p) => p.name),
     });
   }
   return { stats, enrichedPlaces };
@@ -103,11 +147,11 @@ async function collect() {
 
 const { stats, enrichedPlaces } = await collect();
 const ts = `// auto-generated by scripts/sync-tourapi.mjs — ${new Date().toISOString()}
-// 하이브리드: 사우나/온천=curated(seed.ts), 맛집/볼거리=tourAPI 보강(이 파일).
+// 하이브리드: 사우나/온천=curated(seed.ts), 맛집/볼거리/숙소=tourAPI 실데이터 보강(이 파일).
 // seed.ts가 이 파일을 optional import하여 지역별 places에 병합합니다.
 import type { Place } from "./schema";
 
-// 지역별 tourAPI 보강 장소 (맛집/볼거리)
+// 지역별 tourAPI 보강 장소 (맛집/볼거리/숙소 - 실좌표 포함)
 export const enrichedPlaces: Record<string, Place[]> = ${JSON.stringify(enrichedPlaces, null, 2)};
 
 // 수집 요약 (모니터링/디버그용)

@@ -1,5 +1,6 @@
 export type Stop = {
   time: string;
+  placeId?: string;
   title: string;
   reason: string;
   tip?: string;

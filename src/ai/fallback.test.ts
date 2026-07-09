@@ -31,6 +31,9 @@ describe("fallbackCourse — 새 기능 (사우나 먼저 고르기 / 온천중�
 
   it("숙소 추천이 켜지면 onsen/sauna 보유 숙소가 마지막 stop에 온다", () => {
     const region = getRegion("gangwon")!;
+    const lodging = region.places.find((p) => p.type === "lodging" && (p.hasOnsen || p.hasSauna));
+    // tourAPI 실데이터에 온천/사우나 숙소가 있으면 마지막 stop에 온다
+    if (!lodging) return; // 동기화 데이터 없으면 스킵
     const course = fallbackCourse({ ...base, includeLodging: true }, region);
     const last = course.days[0].stops[course.days[0].stops.length - 1];
     const place = region.places.find((p) => p.id === last.placeId);

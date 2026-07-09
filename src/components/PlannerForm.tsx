@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { PlannerInput, Preference } from "@/data/schema";
 import { CourseView } from "./CourseView";
+import { CourseSkeleton } from "./CourseSkeleton";
 import type { Course } from "./types";
 
 const REGIONS = [
@@ -27,11 +28,11 @@ const PREFS: { id: Preference; label: string }[] = [
   { id: "foodie", label: "음식중심" },
 ];
 
-export function PlannerForm() {
-  const [region, setRegion] = useState("gangwon");
-  const [days, setDays] = useState(2);
-  const [prefs, setPrefs] = useState<Preference[]>([]);
-  const [note, setNote] = useState("");
+export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: PlannerInput | null; autoSubmit?: boolean }) {
+  const [region, setRegion] = useState<PlannerInput["region"]>(initialInput?.region ?? "gangwon");
+  const [days, setDays] = useState(initialInput?.days ?? 2);
+  const [prefs, setPrefs] = useState<Preference[]>(initialInput?.preferences ?? []);
+  const [note, setNote] = useState(initialInput?.note ?? "");
   const [loading, setLoading] = useState(false);
   const [course, setCourse] = useState<Course | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +62,14 @@ export function PlannerForm() {
     }
   };
 
+  // 공유 URL로 진입 시 자동 생성
+  useEffect(() => {
+    if (autoSubmit && !course && !loading) {
+      submit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSubmit]);
+
   return (
     <div className="space-y-6">
       <section className="card p-5">
@@ -68,7 +77,7 @@ export function PlannerForm() {
         <select
           className="w-full border rounded-lg p-3 min-h-[44px]"
           value={region}
-          onChange={(e) => setRegion(e.target.value)}
+          onChange={(e) => setRegion(e.target.value as PlannerInput["region"])}
           aria-label="지역 선택"
         >
           {REGIONS.map((r) => (
@@ -126,7 +135,23 @@ export function PlannerForm() {
         {loading ? "AI가 코스를 짜고 있어요…" : "코스 만들기"}
       </button>
 
+      {course && (
+        <button
+          type="button"
+          className="btn-secondary w-full"
+          onClick={() => {
+            const url = `${window.location.origin}/?region=${region}&days=${days}${prefs.length ? `&prefs=${prefs.join(",")}` : ""}${note ? `&note=${encodeURIComponent(note)}` : ""}`;
+            navigator.clipboard?.writeText(url);
+            alert("공유 URL이 클립보드에 복사됐어요!\n" + url);
+          }}
+        >
+          🔗 코스 공유 URL 복사
+        </button>
+      )}
+
       {error && <p className="text-red-600 text-sm">오류: {error}</p>}
+
+      {loading && !course && <CourseSkeleton />}
 
       {course && <CourseView course={course} onRetry={submit} loading={loading} />}
     </div>

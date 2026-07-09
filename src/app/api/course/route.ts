@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PlannerInputSchema } from "@/data/schema";
 import { generateCourse } from "@/ai/engine";
 import { rateLimit, clientIp } from "../rate-limit";
+import { recordGeneration } from "@/lib/stats";
 
 // 전체 응답 하드 타임아웃 (무료 모델 레이트리밋 시 폴백으로 신속 전환)
 const HARD_TIMEOUT_MS = 10000;
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
   try {
     const course = await Promise.race([generateCourse(parsed.data), timeout]);
     if (!course) throw new Error("empty");
+    recordGeneration(!!course.usedFallback);
     return NextResponse.json(course);
   } catch {
     try {
@@ -45,6 +47,7 @@ export async function POST(req: NextRequest) {
       const region = getRegion(parsed.data.region);
       if (!region) return NextResponse.json({ error: "unknown_region" }, { status: 400 });
       const fb = fallbackCourse(parsed.data, region);
+      recordGeneration(true);
       return NextResponse.json({ ...fb, usedFallback: true });
     } catch {
       return NextResponse.json({ error: "generation_failed" }, { status: 500 });

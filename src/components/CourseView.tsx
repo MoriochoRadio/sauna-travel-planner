@@ -27,7 +27,15 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                 <li key={i} className="relative">
                   <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-onsen" />
                   <div className="text-sm">
-                    <span className="font-mono text-onsen">{s.time}</span> <span className="font-semibold">{s.title}</span>
+                    <span className="font-mono text-onsen">{s.time}</span>{" "}
+                    <a
+                      href={`https://map.kakao.com/?q=${encodeURIComponent(s.title)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold underline decoration-onsen/40 hover:decoration-onsen"
+                    >
+                      {s.title}
+                    </a>
                   </div>
                   <div className="text-xs text-bark/70">{s.reason}</div>
                   {s.tip && <div className="text-xs text-amber-700">💧 {s.tip}</div>}

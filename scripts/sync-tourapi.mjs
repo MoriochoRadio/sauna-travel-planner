@@ -103,7 +103,7 @@ async function collect() {
       .slice(0, 8)
       .map((i, idx) => toPlace(i, r.id, "attraction", idx + 1));
 
-    // 숙소: 실데이터 + onsen/sauna 추정 (목록 응답의 homepage/overview 활용)
+    // 숙소: 실데이터 + onsen/sauna 추정 (이름 기준 — tourAPI 목록은 overview 미제공)
     const seenStay = new Set();
     const stayPlaces = [];
     for (const i of stay.filter((x) => x.title && !seenStay.has(x.title) && seenStay.add(x.title)).slice(0, 10)) {
@@ -112,8 +112,6 @@ async function collect() {
       const place = toPlace(i, r.id, "lodging", stayPlaces.length + 1);
       place.hasOnsen = hasOnsen || undefined;
       place.hasSauna = blob.includes("사우나") || blob.includes("찜질") || undefined;
-      // homepage는 목록 응답에 이미 있음
-      place.homepage = i.homepage ? stripTags(i.homepage) : undefined;
       stayPlaces.push(place);
     }
 

@@ -3,8 +3,5 @@
   "buildCommand": "next build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
-  "devCommand": "next dev",
-  "env": {
-    "OPENROUTER_API_KEY": "@openrouter_api_key"
-  }
+  "devCommand": "next dev"
 }

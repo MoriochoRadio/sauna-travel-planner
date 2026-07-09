@@ -20,7 +20,12 @@ test("지도 링크가 각 stop에 존재한다", async ({ page }) => {
   await page.getByRole("button", { name: "코스 만들기" }).click();
 
   const heading = page.getByText(/제주 · \d일 코스/);
-  await expect(heading).toBeVisible({ timeout: 20000 });
+  try {
+    await expect(heading).toBeVisible({ timeout: 20000 });
+  } catch (e) {
+    console.log("[DEBUG] page content:", await page.content().catch(() => "n/a"));
+    throw e;
+  }
 
   // 카카오맵 링크 확인
   const mapLink = page.locator('a[href^="https://map.kakao.com/?q="]').first();

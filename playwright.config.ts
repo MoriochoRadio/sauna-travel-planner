@@ -14,6 +14,8 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:3939",
     headless: true,
+    screenshot: "only-on-failure",
+    trace: "on-first-retry",
     launchOptions: isCI
       ? {} // CI는 Playwright 기본 브라우저 사용
       : { executablePath: localExecutable },

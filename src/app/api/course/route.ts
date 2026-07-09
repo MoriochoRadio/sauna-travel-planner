@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PlannerInputSchema } from "@/data/schema";
 import { generateCourse } from "@/ai/engine";
+import { rateLimit, clientIp } from "../rate-limit";
 
 // 전체 응답 하드 타임아웃 (무료 모델 레이트리밋 시 폴백으로 신속 전환)
 const HARD_TIMEOUT_MS = 10000;
 
 export async function POST(req: NextRequest) {
+  if (!rateLimit(clientIp(req))) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -34,7 +39,6 @@ export async function POST(req: NextRequest) {
     if (!course) throw new Error("empty");
     return NextResponse.json(course);
   } catch {
-    // 타임아웃/실패 → 폴백 코스 생성
     try {
       const { fallbackCourse } = await import("@/ai/fallback");
       const { getRegion } = await import("@/data/seed");

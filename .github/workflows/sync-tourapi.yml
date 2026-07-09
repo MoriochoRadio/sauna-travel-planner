@@ -1,0 +1,28 @@
+name: Sync tourAPI
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # 매주 월요일 03:00 UTC (무료 쿼터 내)
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: tourAPI 동기화
+        env:
+          TOURAPI_KEY: ${{ secrets.TOURAPI_KEY }}
+        run: node scripts/sync-tourapi.mjs
+
+      - name: 커밋 (변경 시)
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "data: tourAPI 자동 보강 (주간 동기화)"
+          file_pattern: "src/data/seed.enriched.ts"

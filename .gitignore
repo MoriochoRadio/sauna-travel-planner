@@ -18,7 +18,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files (시크릿 절대 커밋 금지)
+# auto-generated (tourAPI 동기화 결과 — CI에서 생성)
+src/data/seed.enriched.ts
+
 .env
 .env*.local
 .env.local

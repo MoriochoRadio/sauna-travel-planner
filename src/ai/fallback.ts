@@ -24,22 +24,49 @@ function pick<T>(arr: T[]): T {
 }
 
 // 시간대 템플릿 (도메인 규칙 R-1~R-4)
-function buildDay(day: number, region: RegionData, prefs: Preference[], note?: string): Day {
-  const saunaLike = region.places.filter((p) => ["sauna", "jjimjilbang", "spa"].includes(p.type));
+function buildDay(
+  day: number,
+  region: RegionData,
+  prefs: Preference[],
+  note: string | undefined,
+  opts: { anchorSauna?: Place; onsenFocus?: boolean; includeLodging?: boolean }
+): Day {
+  const { anchorSauna, onsenFocus, includeLodging } = opts;
+  // 핵심(사우나/온천/찜질방) 후보 — 선택 사우나 제외
+  const saunaLike = region.places.filter(
+    (p) => ["sauna", "jjimjilbang", "spa"].includes(p.type) && p.id !== anchorSauna?.id
+  );
+  // 온천 중심 모드: spa(온천) 우선 정렬
+  const sortCore = (a: Place, b: Place) => {
+    if (onsenFocus) {
+      const aO = a.type === "spa" ? 2 : 0;
+      const bO = b.type === "spa" ? 2 : 0;
+      if (aO !== bO) return bO - aO;
+    }
+    return score(b, prefs) - score(a, prefs);
+  };
   const restaurants = region.places.filter((p) => p.type === "restaurant");
   const attractions = region.places.filter((p) => p.type === "attraction");
 
-  const sauna = [...saunaLike].sort((a, b) => score(b, prefs) - score(a, prefs))[0] ?? pick(saunaLike);
+  // 첫 stop = 선택 사우나(있으면), 없으면 점수 높은 핵심
+  const first = anchorSauna ?? [...saunaLike].sort(sortCore)[0];
+  const second = [...saunaLike].sort(sortCore)[0] ?? pick(saunaLike);
   const lunch = [...restaurants].sort((a, b) => score(b, prefs) - score(a, prefs))[0] ?? pick(restaurants);
   const dinner = [...restaurants].sort((a, b) => score(b, prefs) - score(a, prefs))[1] ?? pick(restaurants);
   const attraction = [...attractions].sort((a, b) => score(b, prefs) - score(a, prefs))[0] ?? pick(attractions);
+  // 숙소(온천/사우나 보유) 추천 — includeLodging이면 저녁 이후에 배치
+  const lodging = includeLodging
+    ? region.places.find((p) => p.type === "lodging" && (p.hasOnsen || p.hasSauna))
+    : undefined;
 
   const stops: CourseStop[] = [
     {
       time: "10:00",
-      placeId: sauna?.id,
-      title: sauna?.name ?? "사우나",
-      reason: `${sauna?.name ?? "사우나"}에서 하루를 시작하는 힐링`,
+      placeId: first?.id,
+      title: first?.name ?? "사우나",
+      reason: anchorSauna
+        ? `${anchorSauna.name}에서 하루를 시작하는 힐링`
+        : `${first?.name ?? "사우나"}에서 하루를 시작하는 힐링`,
       tip: "입욕 전 수분을 챙기세요.",
     },
     {
@@ -50,9 +77,9 @@ function buildDay(day: number, region: RegionData, prefs: Preference[], note?: s
     },
     {
       time: "15:00",
-      placeId: attraction?.id,
-      title: attraction?.name ?? "볼거리",
-      reason: "사우나 사이 완충 겸 산책",
+      placeId: second?.id ?? attraction?.id,
+      title: second?.name ?? attraction?.name ?? "볼거리",
+      reason: second ? "이어서 another 사우나·온천 코스" : "사우나 사이 완충 겸 산책",
       tip: note?.includes("차 없음") ? "대중교통 동선을 확인하세요." : undefined,
     },
     {
@@ -63,7 +90,22 @@ function buildDay(day: number, region: RegionData, prefs: Preference[], note?: s
     },
   ];
 
-  const theme = prefs.includes("premium")
+  // 숙소 추천이 있으면 마지막에 추가
+  if (lodging) {
+    stops.push({
+      time: "21:00",
+      placeId: lodging.id,
+      title: lodging.name,
+      reason: `온천·사우나 완비 숙소에서 하루 마무리 (${lodging.hasOnsen ? "온천" : "사우나"} 보유)`,
+      tip: "숙소 온천은 밤에도 운영되는지 확인하세요.",
+    });
+  }
+
+  const theme = anchorSauna
+    ? `${anchorSauna.name} 중심 코스`
+    : onsenFocus
+    ? "온천 중심 힐링"
+    : prefs.includes("premium")
     ? "프리미엄 온천 힐링"
     : prefs.includes("budget")
     ? "가성비 사우나 여행"
@@ -75,9 +117,18 @@ function buildDay(day: number, region: RegionData, prefs: Preference[], note?: s
 }
 
 export function fallbackCourse(input: PlannerInput, region: RegionData): Course {
+  const anchorSauna = input.anchorSaunaId
+    ? region.places.find((p) => p.id === input.anchorSaunaId)
+    : undefined;
   const days: Day[] = [];
   for (let d = 1; d <= input.days; d++) {
-    days.push(buildDay(d, region, input.preferences, input.note));
+    days.push(
+      buildDay(d, region, input.preferences, input.note, {
+        anchorSauna: d === 1 ? anchorSauna : undefined, // 선택 사우나는 1일차에 고정
+        onsenFocus: input.onsenFocus,
+        includeLodging: input.includeLodging,
+      })
+    );
   }
 
   // 예상 비용: 선택된 장소 기준 1인 합산
@@ -90,6 +141,8 @@ export function fallbackCourse(input: PlannerInput, region: RegionData): Course 
     region: region.name,
     days,
     estCostKrw: cost,
-    summary: `${input.days}일간 하루 1회 사우나·온천을 중심으로, 수분 500ml를 챙기며 여유롭게 즐겨보세요.`,
+    summary: anchorSauna
+      ? `${input.days}일간 ${anchorSauna.name}을 중심으로 사우나·온천을 즐기며, 수분 500ml를 챙기세요.`
+      : `${input.days}일간 하루 1회 사우나·온천을 중심으로, 수분 500ml를 챙기며 여유롭게 즐겨보세요.`,
   };
 }

@@ -47,11 +47,26 @@ export function userPrompt(input: PlannerInput, region: RegionData): string {
     : "없음";
   const note = input.note?.trim() || "없음";
 
+  // 먼저 고른 사우나/온천을 코스의 핵심(첫 stop)으로 고정
+  const anchor = input.anchorSaunaId
+    ? region.places.find((p) => p.id === input.anchorSaunaId)
+    : undefined;
+  const anchorLine = anchor
+    ? `\n중심 사우나(반드시 1일차 첫 stop으로 배치): ${anchor.name} (${anchor.id})`
+    : "";
+
+  const onsenLine = input.onsenFocus
+    ? "\n모드: 온천 중심 — spa(온천) 유형을 우선 배치하고 온천 위주로 코스를 구성하세요."
+    : "";
+  const lodgingLine = input.includeLodging
+    ? "\n숙소: 온천/사우나를 보유한 숙소(lodging, hasOnsen/hasSauna)를 저녁 이후 마지막 stop으로 추천하세요."
+    : "";
+
   return `[입력]
 지역: ${region.name}
 기간: ${input.days}일
 취향: ${prefs}
-특이사항: ${note}
+특이사항: ${note}${anchorLine}${onsenLine}${lodgingLine}
 
 [장소 데이터]
 ${JSON.stringify(region.places, null, 2)}

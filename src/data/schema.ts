@@ -1,8 +1,13 @@
 import { z } from "zod";
 
 // ── 장소 유형 ───────────────────────────────────────────────
-export const PlaceType = z.enum(["sauna", "jjimjilbang", "spa", "restaurant", "attraction"]);
+export const PlaceType = z.enum([
+  "sauna", "jjimjilbang", "spa", "restaurant", "attraction", "lodging",
+]);
 export type PlaceType = z.infer<typeof PlaceType>;
+
+// 여행의 핵심(사우나/온천/찜질방) vs 부가(맛집/볼거리/숙소)
+export const CORE_TYPES: PlaceType[] = ["sauna", "jjimjilbang", "spa", "lodging"];
 
 // ── 지역 ────────────────────────────────────────────────────
 export const Region = z.enum([
@@ -31,6 +36,9 @@ export const PlaceSchema = z.object({
   openHours: z.string().optional(),            // 예: "06:00-22:00"
   highlights: z.array(z.string()),             // 추천 포인트
   source: z.enum(["curated", "tourapi"]).optional(), // 데이터 출처
+  // 숙소(lodging)가 보유한 온천/사우나 시설
+  hasOnsen: z.boolean().optional(),            // 노천/실내 온천 보유
+  hasSauna: z.boolean().optional(),            // 사우나/찜질방 보유
 });
 export type Place = z.infer<typeof PlaceSchema>;
 
@@ -39,6 +47,7 @@ export const RegionSchema = z.object({
   id: Region,
   name: z.string(),                            // 한글 표기
   blurb: z.string(),                           // 지역 한 줄 소개
+  onsenDistrict: z.boolean().default(false),   // 온천 중심 지역(강원/경주/제주 등)
   places: z.array(PlaceSchema),
 });
 export type RegionData = z.infer<typeof RegionSchema>;
@@ -55,5 +64,8 @@ export const PlannerInputSchema = z.object({
   days: z.number().int().min(1).max(4),
   preferences: z.array(Preference).default([]),
   note: z.string().optional(),                 // 특이사항 자유텍스트
+  anchorSaunaId: z.string().optional(),        // 먼저 고른 핵심 사우나/온천 id
+  onsenFocus: z.boolean().default(false),      // 온천 중심 모드
+  includeLodging: z.boolean().default(true),   // 온천/사우나 보유 숙소 추천 포함
 });
 export type PlannerInput = z.infer<typeof PlannerInputSchema>;

@@ -3,7 +3,7 @@ import { getRegion } from "../data/seed";
 import type { PlannerInput } from "../data/schema";
 import { CourseSchema } from "./course.schema";
 
-const baseInput: PlannerInput = { region: "gangwon", days: 2, preferences: [], note: undefined };
+const baseInput: PlannerInput = { region: "gangwon", days: 2, preferences: [], note: undefined, onsenFocus: false, includeLodging: false };
 
 describe("fallback 코스 생성", () => {
   test("기간=2일 입력에 2일 코스를 만든다", () => {

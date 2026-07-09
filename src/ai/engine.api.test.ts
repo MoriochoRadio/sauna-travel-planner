@@ -13,7 +13,7 @@ function mockFetch(status: number, body: unknown) {
 }
 
 describe("엔진 오케스트레이션", () => {
-  const input: PlannerInput = { region: "gangwon", days: 2, preferences: [], note: undefined };
+  const input: PlannerInput = { region: "gangwon", days: 2, preferences: [], note: undefined, onsenFocus: false, includeLodging: false };
 
   test("존재하지 않는 region은 예외를 던진다", async () => {
     await expect(generateCourse({ ...input, region: "mars" as any })).rejects.toThrow();
@@ -28,7 +28,7 @@ describe("엔진 오케스트레이션", () => {
 
 describe("generateWithLLM 모델 체인", () => {
   const region = getRegion("gangwon")!;
-  const input: PlannerInput = { region: "gangwon", days: 1, preferences: [], note: undefined };
+  const input: PlannerInput = { region: "gangwon", days: 1, preferences: [], note: undefined, onsenFocus: false, includeLodging: false };
 
   beforeEach(() => {
     process.env.OPENROUTER_API_KEY = "test-key";

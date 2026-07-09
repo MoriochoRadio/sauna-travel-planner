@@ -10,6 +10,7 @@ export const sampleRegions: RegionData[] = [
     id: "seoul",
     name: "서울",
     blurb: "도심 속 사우나와 골목 맛집이 공존하는 당일 힐링",
+    onsenDistrict: false,
     places: [
       {
         id: "seoul-sauna-01",
@@ -79,6 +80,7 @@ export const sampleRegions: RegionData[] = [
     id: "busan",
     name: "부산",
     blurb: "바다와 함께 누리는 해운대·광안리 찜질 문화",
+    onsenDistrict: false,
     places: [
       {
         id: "busan-sauna-01",
@@ -147,6 +149,7 @@ export const sampleRegions: RegionData[] = [
     id: "gangwon",
     name: "강원",
     blurb: "산속 온천과 송어·감자 요리로 겨울 힐링",
+    onsenDistrict: true,
     places: [
       {
         id: "gangwon-sauna-01",

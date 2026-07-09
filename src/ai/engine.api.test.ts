@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import { vi, describe, expect, test, beforeEach, afterEach } from "vitest";
 import { generateCourse } from "./engine";
 import { generateWithLLM } from "./generate";
 import { getRegion } from "../data/seed";

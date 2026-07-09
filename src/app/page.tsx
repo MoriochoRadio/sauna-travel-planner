@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PlannerForm } from "@/components/PlannerForm";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { decodeInputFromQuery } from "@/data/share";
 import type { PlannerInput } from "@/data/schema";
 
@@ -25,9 +26,13 @@ export default function Home() {
         <h1 className="text-2xl font-bold">🔥 사우나 여행 코스 메이커</h1>
         <p className="text-sm text-bark/70 mt-1">사우나를 축으로 맛집·볼거리를 엮은 맞춤 여행</p>
       </header>
-      {checked && <PlannerForm initialInput={autoInput} autoSubmit={!!autoInput} />}
+      {checked && (
+        <ErrorBoundary>
+          <PlannerForm initialInput={autoInput} autoSubmit={!!autoInput} />
+        </ErrorBoundary>
+      )}
       <footer className="text-center text-xs text-bark/50 mt-8">
-        curated 데이터 기반 · v1
+        tourAPI 실데이터 + 큐레이션 기반 · 사우나 여행 코스 메이커
       </footer>
     </main>
   );

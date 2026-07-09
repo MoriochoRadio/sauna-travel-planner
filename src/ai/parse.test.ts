@@ -8,7 +8,7 @@ describe("safeParseContent (LLM 응답 파싱)", () => {
 
   test("```json 코드펜스를 제거한다", () => {
     const c = "```json\n{\"region\":\"제주\",\"days\":[],\"estCostKrw\":1,\"summary\":\"x\"}\n```";
-    const r = safeParseContent(c) as any;
+    const r = safeParseContent(c) as Record<string, unknown>;
     expect(r.region).toBe("제주");
   });
 

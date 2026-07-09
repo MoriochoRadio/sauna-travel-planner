@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { regions, getRegion } from "./seed";
 
 describe("seed (curated + tourAPI enriched 병합)", () => {

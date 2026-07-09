@@ -278,7 +278,14 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
         </section>
       )}
 
-      {error && <p className="text-red-600 text-sm">오류: {error}</p>}
+      {error && (
+        <div className="card p-4 text-center space-y-3" role="alert">
+          <p className="text-red-600 text-sm">⚠️ 잠시 문제가 생겼어요: {error}</p>
+          <button type="button" onClick={submit} className="btn-secondary">
+            ↺ 다시 시도
+          </button>
+        </div>
+      )}
       {loading && <CourseSkeleton />}
     </div>
   );

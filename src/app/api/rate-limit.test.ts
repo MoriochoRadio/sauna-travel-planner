@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { rateLimit, clientIp } from "./rate-limit";
 
 describe("rateLimit", () => {

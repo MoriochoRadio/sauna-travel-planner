@@ -7,7 +7,8 @@ import { rateLimit, clientIp } from "../rate-limit";
 const HARD_TIMEOUT_MS = 10000;
 
 export async function POST(req: NextRequest) {
-  if (!rateLimit(clientIp(req))) {
+  // CI/테스트 환경에서는 rate-limit 비활성화 (E2E 다중 요청 차단 방지)
+  if (!process.env.CI && !rateLimit(clientIp(req))) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 

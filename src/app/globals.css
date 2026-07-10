@@ -4,8 +4,18 @@
 
 :root {
   --cream: #fbf6ef;
+  --cream-2: #f3e9dc;
   --onsen: #e8743b;
+  --onsen-soft: #fce9dd;
   --bark: #3a2e26;
+  --bark-soft: #7a6a5e;
+  --steam: #6fb7b0;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
 }
 
 body {
@@ -13,22 +23,94 @@ body {
   color: var(--bark);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
     "Malgun Gothic", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-.btn-primary {
-  background: var(--onsen);
-  color: #fff;
-  min-height: 44px;
-  border-radius: 12px;
-  font-weight: 600;
-  transition: opacity 0.15s;
-}
-.btn-primary:hover {
-  opacity: 0.9;
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center bg-onsen-gradient text-white font-semibold min-h-[44px] rounded-btn px-5 transition-all duration-150;
+    box-shadow: 0 6px 16px rgba(232, 116, 59, 0.3);
+  }
+  .btn-primary:hover {
+    @apply opacity-95;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(232, 116, 59, 0.38);
+  }
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+  .btn-primary:disabled {
+    @apply opacity-60 cursor-not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center bg-white text-onsen font-semibold min-h-[44px] rounded-btn px-5 border border-onsen/40 transition-all duration-150;
+  }
+  .btn-secondary:hover {
+    @apply bg-onsen-soft;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center text-bark-soft font-medium min-h-[40px] rounded-btn px-4 transition-colors duration-150;
+  }
+  .btn-ghost:hover {
+    @apply bg-black/5;
+  }
+
+  .card {
+    @apply bg-white rounded-card shadow-card;
+  }
+
+  /* 글래스 카드 (배경이 비치는 반투명) */
+  .glass {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
 }
 
-.card {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(58, 46, 38, 0.08);
+/* 커스텀 스크롤바 (온천 무드) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(232, 116, 59, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(232, 116, 59, 0.55);
+}
+
+/* 커스텀 지도 핀 (onsen 톤) */
+.onsen-pin {
+  background: transparent;
+  border: none;
+}
+.pin-dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #e8743b;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(232, 116, 59, 0.5);
+  transition: transform 0.15s;
+}
+.pin-dot:hover {
+  transform: scale(1.15);
+}
+.pin-dot--sel {
+  width: 22px;
+  height: 22px;
+  background: #c75a26;
+  box-shadow: 0 3px 10px rgba(199, 90, 38, 0.6);
+}
+
+/* 선택 색 */
+::selection {
+  background: var(--onsen-soft);
+  color: var(--bark);
 }

@@ -112,8 +112,8 @@ test("2일차 여행 코스에 숙소(🏨)가 자동 포함된다", async ({ pa
   await page.getByLabel("지역 선택", { exact: true }).selectOption("gangwon");
   await page.getByRole("button", { name: "다음: 사우나 고르기 →" }).click();
   await page.getByRole("button", { name: /추천 받기 →/ }).click();
-  // step3(부가옵션) 도달 대기
-  await expect(page.getByText("기간")).toBeVisible({ timeout: 10000 });
+  // step3(부가옵션) 도달 대기 — 기간 섹션의 2일 버튼 노출로 확인
+  await expect(page.getByRole("button", { name: "2일", exact: true })).toBeVisible({ timeout: 10000 });
   await page.getByRole("button", { name: "2일", exact: true }).click();
   await page.getByRole("button", { name: "코스 만들기" }).click();
 

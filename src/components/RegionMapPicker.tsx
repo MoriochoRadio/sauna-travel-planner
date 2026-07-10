@@ -67,6 +67,15 @@ export function RegionMapPicker({
           maxZoom: 18,
         }).addTo(map);
 
+        // onsen 컬러 커스텀 핀 (Leaflet 기본 파란 마커 교체)
+        const makePin = (selected: boolean) =>
+          L.divIcon({
+            className: "onsen-pin",
+            html: `<span class="pin-dot ${selected ? "pin-dot--sel" : ""}"></span>`,
+            iconSize: selected ? [26, 26] : [20, 20],
+            iconAnchor: selected ? [13, 13] : [10, 10],
+          });
+
         const drawMarkers = (selId?: string) => {
           for (const k in markersRef.current) map.removeLayer(markersRef.current[k]);
           markersRef.current = {};
@@ -74,10 +83,7 @@ export function RegionMapPicker({
             const isSel = s.id === selId;
             const marker = L.marker([s.lat, s.lng], {
               title: s.fullName,
-              ...(isSel ? { icon: L.icon({
-                iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-                iconSize: [30, 48], iconAnchor: [15, 48],
-              }) } : {}),
+              icon: makePin(isSel),
             }).addTo(map);
             marker.bindTooltip(s.fullName, { direction: "top" });
             marker.on("click", () => onSelect(s));
@@ -127,7 +133,7 @@ export function RegionMapPicker({
       </p>
       <div
         ref={ref}
-        className="w-full h-72 rounded-lg border border-gray-200 z-0"
+        className="w-full h-72 rounded-card border border-onsen/20 z-0"
         aria-label="세부 지역 선택 지도"
       />
     </div>

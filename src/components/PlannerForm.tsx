@@ -151,11 +151,11 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
       </ol>
 
       {step === 1 && (
-        <section className="card p-5 space-y-4">
+        <section className="card glass p-5 md:p-6 space-y-5 animate-fade-up">
           <div>
             <h2 className="font-bold mb-3">지역</h2>
             <select
-              className="w-full border rounded-lg p-3 min-h-[44px]"
+              className="w-full border border-onsen/20 rounded-btn p-3 min-h-[44px] bg-white focus:border-onsen focus:ring-2 focus:ring-onsen/20 outline-none transition"
               value={region}
               onChange={(e) => onRegionChange(e.target.value as PlannerInput["region"])}
               aria-label="지역 선택"
@@ -172,7 +172,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
               <button
                 type="button"
                 onClick={() => setMapMode("dropdown")}
-                className={`flex-1 min-h-[40px] rounded-lg border ${mapMode === "dropdown" ? "bg-onsen text-white border-onsen" : "border-gray-300"}`}
+                className={`flex-1 min-h-[40px] rounded-btn border transition-all ${mapMode === "dropdown" ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
                 aria-pressed={mapMode === "dropdown"}
               >
                 드롭다운에서 선택
@@ -180,7 +180,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
               <button
                 type="button"
                 onClick={() => setMapMode("nationwide")}
-                className={`flex-1 min-h-[40px] rounded-lg border ${mapMode === "nationwide" ? "bg-onsen text-white border-onsen" : "border-gray-300"}`}
+                className={`flex-1 min-h-[40px] rounded-btn border transition-all ${mapMode === "nationwide" ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
                 aria-pressed={mapMode === "nationwide"}
               >
                 지도에서 직접 선택
@@ -190,7 +190,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
             {mapMode === "dropdown" ? (
               <select
                 name="sigungu"
-                className="w-full border rounded-lg p-3 min-h-[44px]"
+                className="w-full border border-onsen/20 rounded-btn p-3 min-h-[44px] bg-white focus:border-onsen focus:ring-2 focus:ring-onsen/20 outline-none transition"
                 value={sigungu ?? ""}
                 onChange={(e) => {
                   const id = e.target.value;
@@ -240,7 +240,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
               <button
                 type="button"
                 onClick={() => setOnsenFocus(false)}
-                className={`flex-1 min-h-[44px] rounded-lg border ${!onsenFocus ? "bg-onsen text-white border-onsen" : "border-gray-300"}`}
+                className={`flex-1 min-h-[44px] rounded-btn border transition-all ${!onsenFocus ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
                 aria-pressed={!onsenFocus}
               >
                 일반 (사우나/온천 혼합)
@@ -248,7 +248,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
               <button
                 type="button"
                 onClick={() => setOnsenFocus(true)}
-                className={`flex-1 min-h-[44px] rounded-lg border ${onsenFocus ? "bg-onsen text-white border-onsen" : "border-gray-300"}`}
+                className={`flex-1 min-h-[44px] rounded-btn border transition-all ${onsenFocus ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
                 aria-pressed={onsenFocus}
               >
                 ♨ 온천 중심
@@ -265,7 +265,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
       )}
 
       {step === 2 && (
-        <section className="card p-5 space-y-4">
+        <section className="card glass p-5 md:p-6 space-y-4 animate-fade-up">
           <div className="flex items-center justify-between">
             <h2 className="font-bold">사우나·온천 지도 ({regionData?.name})</h2>
             {anchorSauna && (
@@ -292,7 +292,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
       )}
 
       {step === 3 && (
-        <section className="card p-5 space-y-5">
+        <section className="card glass p-5 md:p-6 space-y-5 animate-fade-up">
           {anchorSauna && (
             <div className="text-sm bg-onsen/10 text-onsen rounded-lg p-3">
               🎯 중심: <b>{anchorSauna.name}</b> — 이 사우나를 축으로 코스를 짜요.
@@ -306,7 +306,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
                   key={d}
                   type="button"
                   onClick={() => setDays(d)}
-                  className={`flex-1 min-h-[44px] rounded-lg border ${days === d ? "bg-onsen text-white border-onsen" : "border-gray-300"}`}
+                  className={`flex-1 min-h-[44px] rounded-btn border transition-all ${days === d ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
                   aria-pressed={days === d}
                 >
                   {d}일
@@ -322,7 +322,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
                   key={p.id}
                   type="button"
                   onClick={() => togglePref(p.id)}
-                  className={`px-3 py-2 rounded-full border text-sm ${prefs.includes(p.id) ? "bg-onsen text-white border-onsen" : "border-gray-300"}`}
+                  className={`px-3 py-2 rounded-full border text-sm transition-all ${prefs.includes(p.id) ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
                   aria-pressed={prefs.includes(p.id)}
                 >
                   {p.label}
@@ -344,7 +344,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
           <div>
             <h2 className="font-bold mb-3">특이사항</h2>
             <textarea
-              className="w-full border rounded-lg p-3 min-h-[64px]"
+              className="w-full border border-onsen/20 rounded-btn p-3 min-h-[64px] bg-white focus:border-onsen focus:ring-2 focus:ring-onsen/20 outline-none transition resize-none"
               placeholder="예: 겨울 방문, 차 없음, 아이 동반"
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 500))}

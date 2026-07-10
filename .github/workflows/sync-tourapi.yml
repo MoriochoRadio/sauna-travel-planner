@@ -23,6 +23,11 @@ jobs:
           TOURAPI_KEY: ${{ secrets.TOURAPI_KEY }}
         run: node scripts/sync-tourapi.mjs
 
+      - name: searchKeyword2 검증 (런타임 API 실증)
+        env:
+          TOURAPI_KEY: ${{ secrets.TOURAPI_KEY }}
+        run: node scripts/test-searchkeyword.mjs
+
       - name: 커밋 (변경 시)
         uses: stefanzweifel/git-auto-commit-action@v5
         with:

@@ -9,13 +9,19 @@ import type { PlannerInput } from "@/data/schema";
 export default function Home() {
   // 공유 URL(?region=...&days=...)로 진입 시 자동 생성 플래그
   const [autoInput, setAutoInput] = useState<PlannerInput | null>(null);
+  const [autoSubmit, setAutoSubmit] = useState(false);
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     const qs = window.location.search;
     if (qs) {
+      const params = new URLSearchParams(qs);
       const decoded = decodeInputFromQuery(qs.slice(1));
-      if (decoded) setAutoInput(decoded);
+      // 초기값은 항상 폼에 전달, &auto=0이면 자동 제출만 생략(라운드트립 검증용)
+      if (decoded) {
+        setAutoInput(decoded);
+        setAutoSubmit(params.get("auto") !== "0");
+      }
     }
     setChecked(true);
   }, []);
@@ -28,7 +34,7 @@ export default function Home() {
       </header>
       {checked && (
         <ErrorBoundary>
-          <PlannerForm initialInput={autoInput} autoSubmit={!!autoInput} />
+          <PlannerForm initialInput={autoInput} autoSubmit={autoSubmit} />
         </ErrorBoundary>
       )}
       <footer className="text-center text-xs text-bark/50 mt-8">

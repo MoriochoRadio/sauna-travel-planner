@@ -76,10 +76,21 @@ test("세부 지역 지정 시 공유 URL에 sigungu이 보존된다", async ({ 
   // 공유 URL 복사
   page.on("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "🔗 코스 공유 URL 복사" }).click();
-  const url = await page.evaluate(() => window.location.origin + "/?region=daegu&sigungu=daegu-suseong&days=2");
+  const url = await page.evaluate(() => window.location.origin + "/?region=daegu&sigungu=daegu-suseong&days=2&auto=0");
   await page.goto(url);
   // 라운드트립: 드롭다운에 값 복원
-  await expect(page.getByRole("combobox", { name: "세부 지역 선택" })).toHaveValue("daegu-suseong");
+  await expect(page.getByRole("combobox", { name: "세부 지역 선택" }).first()).toHaveValue("daegu-suseong");
+});
+
+test("전국 지도 탭에서 임의 시군구를 자유롭게 선택할 수 있다", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("지역 선택", { exact: true }).selectOption("daegu");
+  // "지도에서 직접 선택" 탭
+  await page.getByRole("button", { name: "지도에서 직접 선택" }).click();
+  // 전국 지도 컨테이너 노출 (leaflet 동적 로드 대기)
+  const map = page.locator('[aria-label="세부 지역 선택 지도"]');
+  await expect(map).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("전국 지도를 자유롭게 움직여")).toBeVisible();
 });
 
 test("코스 생성 후 '다시 만들기'가 동작한다", async ({ page }) => {

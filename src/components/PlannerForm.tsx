@@ -37,6 +37,7 @@ type Step = 1 | 2 | 3;
 export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: PlannerInput | null; autoSubmit?: boolean }) {
   const [region, setRegion] = useState<PlannerInput["region"]>(initialInput?.region ?? "gangwon");
   const [sigungu, setSigungu] = useState<string | undefined>(initialInput?.sigungu);
+  const [mapMode, setMapMode] = useState<"dropdown" | "nationwide">("dropdown");
   const [onsenFocus, setOnsenFocus] = useState(initialInput?.onsenFocus ?? false);
   const [days, setDays] = useState(initialInput?.days ?? 2);
   const [prefs, setPrefs] = useState<Preference[]>(initialInput?.preferences ?? []);
@@ -101,14 +102,21 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
     setAnchorSaunaId(undefined);
   };
 
-  // 지도/드롭다운에서 시군구 선택 시 해당 region인지 보정
+  // 지도/드롭다운에서 시군구 선택 시 해당 region인지 보정 + 실시간 사우나 미리보기
   const onSigunguSelect = (s: Sigungu) => {
     if (s.region !== region) {
       setRegion(s.region);
       setAnchorSaunaId(undefined);
     }
     setSigungu(s.id);
+    // 실시간 사우나 미리보기 (키 없으면 무시)
+    fetch(`/api/places?region=${s.region}&sigungu=${s.id}`)
+      .then((r) => r.json())
+      .then((j) => setLivePreview(j.places ?? []))
+      .catch(() => setLivePreview([]));
   };
+
+  const [livePreview, setLivePreview] = useState<any[]>([]);
 
   if (course) {
     return (
@@ -169,24 +177,70 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
 
           <div>
             <h2 className="font-bold mb-3">세부 지역 (시군구)</h2>
-            <select
-              name="sigungu"
-              className="w-full border rounded-lg p-3 min-h-[44px] mb-3"
-              value={sigungu ?? ""}
-              onChange={(e) => {
-                const id = e.target.value;
-                if (!id) { setSigungu(undefined); return; }
-                const s = getSigungus(region).find((x) => x.id === id);
-                if (s) onSigunguSelect(s);
-              }}
-              aria-label="세부 지역 선택"
-            >
-              <option value="">전체 (세부 지역 미지정)</option>
-              {getSigungus(region).map((s) => (
-                <option key={s.id} value={s.id}>{s.fullName}</option>
-              ))}
-            </select>
-            <RegionMapPicker region={region} selectedId={sigungu} onSelect={onSigunguSelect} />
+            <div className="flex gap-1 mb-3 text-sm">
+              <button
+                type="button"
+                onClick={() => setMapMode("dropdown")}
+                className={`flex-1 min-h-[40px] rounded-lg border ${mapMode === "dropdown" ? "bg-onsen text-white border-onsen" : "border-gray-300"}`}
+                aria-pressed={mapMode === "dropdown"}
+              >
+                드롭다운에서 선택
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapMode("nationwide")}
+                className={`flex-1 min-h-[40px] rounded-lg border ${mapMode === "nationwide" ? "bg-onsen text-white border-onsen" : "border-gray-300"}`}
+                aria-pressed={mapMode === "nationwide"}
+              >
+                지도에서 직접 선택
+              </button>
+            </div>
+
+            {mapMode === "dropdown" ? (
+              <select
+                name="sigungu"
+                className="w-full border rounded-lg p-3 min-h-[44px]"
+                value={sigungu ?? ""}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (!id) { setSigungu(undefined); return; }
+                  const s = getSigungus(region).find((x) => x.id === id);
+                  if (s) onSigunguSelect(s);
+                }}
+                aria-label="세부 지역 선택"
+              >
+                <option value="">전체 (세부 지역 미지정)</option>
+                {getSigungus(region).map((s) => (
+                  <option key={s.id} value={s.id}>{s.fullName}</option>
+                ))}
+              </select>
+            ) : (
+              <RegionMapPicker mode="nationwide" selectedId={sigungu} onSelect={onSigunguSelect} />
+            )}
+
+            {mapMode === "dropdown" && (
+              <div className="mt-3">
+                <p className="text-xs text-gray-400 mb-2">또는 지역 지도에서 클릭:</p>
+                <RegionMapPicker region={region} selectedId={sigungu} onSelect={onSigunguSelect} />
+              </div>
+            )}
+
+            {sigungu && (
+              <div className="mt-3 p-3 bg-onsen/5 border border-onsen/20 rounded-lg">
+                <p className="text-xs font-semibold text-onsen mb-2">
+                  {getSigungus(region).find((s) => s.id === sigungu)?.fullName ?? "선택된 세부 지역"} 실시간 사우나
+                </p>
+                {livePreview.length === 0 ? (
+                  <p className="text-xs text-gray-400">불러오는 중… (또는 tourAPI 키 미설정 시 curated 데이터로 코스 생성)</p>
+                ) : (
+                  <ul className="text-xs text-gray-600 space-y-1 max-h-32 overflow-auto">
+                    {livePreview.slice(0, 8).map((p) => (
+                      <li key={p.id}>• {p.name}{p.address ? ` — ${p.address}` : ""}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
 
           <div>

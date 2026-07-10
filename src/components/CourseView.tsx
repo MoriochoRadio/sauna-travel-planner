@@ -2,6 +2,7 @@
 
 import type { Course } from "./types";
 import { getRegion } from "@/data/seed";
+import { REGION_LABELS } from "@/data/schema";
 import type { Place } from "@/data/schema";
 
 function kakaoMapUrl(p: Place): string {
@@ -18,15 +19,24 @@ function naverMapUrl(p: Place): string {
 }
 
 export function CourseView({ course, onRetry, loading }: { course: Course; onRetry: () => void; loading: boolean }) {
-  // placeId → 장소 상세 매핑 (세부정보 표시용)
-  const regionData = getRegion(course.region as any);
+  // 장소 상세 매핑: 응답에 실린 places(live+curated 병합) 우선, 부족하면 정적 region으로 보강
   const placeById = new Map<string, Place>();
-  regionData?.places.forEach((p) => placeById.set(p.id, p));
+  const placeByName = new Map<string, Place>();
+  const addPlace = (p: Place) => {
+    placeById.set(p.id, p);
+    if (!placeByName.has(p.name)) placeByName.set(p.name, p);
+  };
+  (course.places ?? []).forEach(addPlace);
+  const regionData = getRegion(course.region as any);
+  regionData?.places.forEach(addPlace);
+
+  const resolvePlace = (s: { placeId?: string; title: string }): Place | undefined =>
+    (s.placeId ? placeById.get(s.placeId) : undefined) ?? placeByName.get(s.title);
 
   return (
     <section className="card p-5 mt-6">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-bold">{course.region} · {course.days.length}일 코스</h2>
+        <h2 className="text-lg font-bold">{REGION_LABELS[course.region as keyof typeof REGION_LABELS] ?? course.region} · {course.days.length}일 코스</h2>
         <button className="text-sm text-onsen underline" onClick={onRetry} disabled={loading}>
           다시 만들기
         </button>
@@ -44,7 +54,7 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
             <h3 className="font-semibold mb-2">Day {d.day} · {d.theme}</h3>
             <ol className="border-l-2 border-onsen/30 pl-4 space-y-3">
               {d.stops.map((s, i) => {
-                const place = s.placeId ? placeById.get(s.placeId) : undefined;
+                const place = resolvePlace(s);
                 return (
                   <li key={i} className="relative">
                     <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-onsen" />

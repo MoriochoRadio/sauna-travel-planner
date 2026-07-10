@@ -106,3 +106,18 @@ test("코스 생성 후 '다시 만들기'가 동작한다", async ({ page }) =>
   await page.getByRole("button", { name: "다시 만들기" }).click();
   await expect(page.getByText(/제주 · \d일 코스/)).toBeVisible({ timeout: 20000 });
 });
+
+test("2일차 여행 코스에 숙소(🏨)가 자동 포함된다", async ({ page }) => {
+  await page.goto("/?region=gangwon");
+  await page.getByLabel("지역 선택", { exact: true }).selectOption("gangwon");
+  await page.getByRole("button", { name: "다음: 사우나 고르기 →" }).click();
+  await page.getByRole("button", { name: /추천 받기 →/ }).click();
+  // step3(부가옵션) 도달 대기
+  await expect(page.getByText("기간")).toBeVisible({ timeout: 10000 });
+  await page.getByRole("button", { name: "2일", exact: true }).click();
+  await page.getByRole("button", { name: "코스 만들기" }).click();
+
+  await expect(page.locator("h2").first()).toHaveText(/강원.*2일 코스/, { timeout: 20000 });
+  // 숙소 배지(🏨)가 코스 내 적어도 1곳에 표시된다
+  await expect(page.getByText("🏨 숙소", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+});

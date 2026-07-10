@@ -12,4 +12,5 @@ export type Course = {
   estCostKrw: number;
   summary: string;
   usedFallback?: boolean;
+  places?: any[]; // 코스에 사용된 장소 전체(live+curated), 평점/온천 배지 매핑용
 };

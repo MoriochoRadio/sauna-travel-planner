@@ -20,6 +20,7 @@ export function systemPrompt(): string {
 - 사우나 전후 수분·휴식 버퍼를 둘 것 (멘트에 수분 500ml 권장)
 - 맛집은 점심(13시)/저녁(18시) 배치
 - 볼거리는 오후(15시) 완충 코스로 배치
+- 2일 이상 여행(다일차)이거나 숙소 옵션이 켜지면, 온천/사우나 보유 숙소(lodging)를 매일 마지막 stop(21:00)에 포함 (매일 다른 숙소 지향)
 - 장소는 반드시 제공된 데이터의 name 또는 placeId를 사용 (존재하지 않는 곳 금지)
 - 취향(조용한/가성비/프리미엄/가족/혼자/야외온천/음식중심)을 반영
 - 한글, 친근하고 실용적인 어투
@@ -58,9 +59,10 @@ export function userPrompt(input: PlannerInput, region: RegionData): string {
   const onsenLine = input.onsenFocus
     ? "\n모드: 온천 중심 — spa(온천) 유형을 우선 배치하고 온천 위주로 코스를 구성하세요."
     : "";
-  const lodgingLine = input.includeLodging
-    ? "\n숙소: 온천/사우나를 보유한 숙소(lodging, hasOnsen/hasSauna)를 저녁 이후 마지막 stop으로 추천하세요."
-    : "";
+  const lodgingLine =
+    input.includeLodging || input.days >= 2
+      ? "\n숙소: 온천/사우나를 보유한 숙소(lodging, hasOnsen/hasSauna)를 저녁 이후 마지막 stop(21:00)으로 추천하세요. 다일차 여행이면 매일 다른 숙소를 배치하세요."
+      : "";
 
   const sigunguLine = input.sigungu
     ? `\n세부 지역(시군구): ${input.sigungu} — 해당 시군구(sigungu 필드 일치) 장소를 우선 배치하세요.`

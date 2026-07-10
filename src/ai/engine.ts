@@ -61,9 +61,9 @@ export async function generateCourse(input: PlannerInput): Promise<CourseResult>
   const llm = await generateWithLLM(input, regionData);
   if (llm) {
     const validated = CourseSchema.parse(llm);
-    return { ...validated, usedFallback: false };
+    return { ...validated, usedFallback: false, places: regionData.places };
   }
 
   const fb = fallbackCourse(input, regionData);
-  return { ...fb, usedFallback: true };
+  return { ...fb, usedFallback: true, places: regionData.places };
 }

@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// 장소 전체 스키마 (live+curated 병합본, 코스와 함께 실려 화면 매핑용)
+import { PlaceSchema } from "../data/schema";
+
 // ── 코스 출력 스키마 (LLM 응답 검증용) ───────────────────────
 export const CourseStopSchema = z.object({
   time: z.string(),                  // "10:00"
@@ -22,6 +25,7 @@ export const CourseSchema = z.object({
   days: z.array(DaySchema),
   estCostKrw: z.number(),
   summary: z.string(),
+  places: z.array(PlaceSchema).optional(), // 코스에 사용된 장소 전체(live+curated)
 });
 export type Course = z.infer<typeof CourseSchema>;
 

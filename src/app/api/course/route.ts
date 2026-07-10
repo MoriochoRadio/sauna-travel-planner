@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       const region = getRegion(parsed.data.region);
       if (!region) return NextResponse.json({ error: "unknown_region" }, { status: 400 });
       const fb = fallbackCourse(parsed.data, region);
-      return NextResponse.json({ ...fb, usedFallback: true });
+      return NextResponse.json({ ...fb, usedFallback: true, places: region.places });
     } catch {
       return NextResponse.json({ error: "generation_failed" }, { status: 500 });
     }
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       const region = getRegion(parsed.data.region);
       if (!region) return NextResponse.json({ error: "unknown_region" }, { status: 400 });
       const fb = fallbackCourse(parsed.data, region);
-      return NextResponse.json({ ...fb, usedFallback: true });
+      return NextResponse.json({ ...fb, usedFallback: true, places: region.places });
     } catch {
       return NextResponse.json({ error: "generation_failed" }, { status: 500 });
     }

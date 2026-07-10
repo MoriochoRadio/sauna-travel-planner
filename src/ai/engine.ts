@@ -30,8 +30,8 @@ export async function generateCourse(input: PlannerInput): Promise<CourseResult>
           console.warn("[engine] 카카오 사우나 병합 실패", (e as Error)?.message);
         }
       }
-      // 1-2) 카카오 숙소 (includeLodging 옵션)
-      if (input.includeLodging && process.env.KAKAO_REST_KEY) {
+      // 1-2) 카카오 숙소 (숙소 옵션 켜짐 OR 다일차 자동포함)
+      if ((input.includeLodging || input.days >= 2) && process.env.KAKAO_REST_KEY) {
         try {
           const raw = await searchKakaoLodging(s.lat, s.lng, input.region, input.sigungu);
           live = [...live, ...raw.map((d, i) => kakaoToPlace(d, input.region, input.sigungu!, i + 1))];

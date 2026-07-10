@@ -114,6 +114,8 @@ export function kakaoToPlace(
   const city = addr?.split(/\s+/).slice(0, 2).join(" ") ?? regionId;
   const type: Place["type"] = isLodging ? "lodging" : isOnsen ? "spa" : "sauna";
   const lodgingHasOnsen = isLodging && LODGING_ONSEN_KW.some((k) => blob.includes(k.toLowerCase()));
+  // 사우나 보유는 명시적 키워드가 있을 때만 (카카오는 별도 필드 미제공)
+  const lodgingHasSauna = isLodging && ["사우나", "찜질", "목욕", "한증막"].some((k) => blob.includes(k.toLowerCase()));
   const place: Place = {
     id: `kk-${regionId}-${sigunguId}-${isLodging ? "l" : "s"}-${idx}`,
     name: d.place_name,
@@ -135,7 +137,7 @@ export function kakaoToPlace(
     homepage: d.place_url,
     tel: d.phone,
     hasOnsen: (isOnsen || lodgingHasOnsen) || undefined,
-    hasSauna: (!isOnsen || isLodging) || undefined,
+    hasSauna: (isOnsen || lodgingHasSauna) || undefined,
   };
   return { ...place, rating: computeRating(place) };
 }

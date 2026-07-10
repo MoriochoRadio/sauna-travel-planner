@@ -1,7 +1,24 @@
 {
   "name": "sauna-travel-planner",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "description": "한국 사우나·찜질방·온천 중심 인터랙티브 추천 여행 코스 생성 웹앱 (Next.js + 카카오 로컬 API + AI)",
+  "keywords": [
+    "sauna",
+    "korea-travel",
+    "onsen",
+    "travel-planner",
+    "spa",
+    "jjimjilbang",
+    "nextjs",
+    "kakao-api",
+    "openrouter",
+    "ai-itinerary"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

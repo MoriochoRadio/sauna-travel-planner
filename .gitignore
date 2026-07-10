@@ -1,6 +1,6 @@
 # dependencies
 node_modules/
-.pnp
+.pnp/
 .pnp.js
 
 # next.js
@@ -18,12 +18,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# auto-generated (tourAPI 동기화 결과 — CI에서 갱신, git에 포함)
-# src/data/seed.enriched.ts  ← 의도적으로 추적(주간 자동 보강 커밋)
-
+# env (키는 절대 커밋 금지 — CI/호스트 env 또는 .env.local에서만 관리)
 .env
 .env*.local
-.env.local
 
 # typescript
 *.tsbuildinfo
@@ -36,7 +33,12 @@ next-env.d.ts
 .vscode/
 .idea/
 *.swp
-test-results
+
+# test artifacts
+test-results/
+playwright-report/
+blob-report/
+
+# temp scripts
 scripts/*.run
 scripts/*_run.mjs
-*.mjs.run

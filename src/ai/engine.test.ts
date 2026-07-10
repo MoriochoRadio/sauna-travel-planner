@@ -14,14 +14,18 @@ describe("fallback 코스 생성", () => {
     expect(course.days[1].day).toBe(2);
   });
 
-  test("각 Day는 4개 Stop(사우나/점심/볼거리/저녁)을 가진다", () => {
+  test("각 Day는 기본 4개 Stop + (다일차/숙소옵션 시) 숙소 Stop을 가진다", () => {
     const region = getRegion("gangwon")!;
     const course = fallbackCourse(baseInput, region);
     course.days.forEach((d) => {
-      expect(d.stops.length).toBe(4);
+      // 1일차: 숙소 없음(4개), 2일차: 숙소 자동 포함(5개)
+      expect([4, 5]).toContain(d.stops.length);
       expect(d.stops[0].time).toBe("10:00"); // 사우나
       expect(d.stops[2].time).toBe("15:00"); // 볼거리 완충
     });
+    // 다일차 여행이면 마지막 Day에 숙소 Stop(21:00)이 포함된다
+    const last = course.days[course.days.length - 1];
+    expect(last.stops.some((s) => s.time === "21:00")).toBe(true);
   });
 
   test("예상 비용은 양수이다", () => {

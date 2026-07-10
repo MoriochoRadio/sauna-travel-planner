@@ -56,9 +56,17 @@ function buildDay(
   const lunch = [...restaurants].sort((a, b) => score(b, prefs) + sigunguBoost(b) - (score(a, prefs) + sigunguBoost(a)))[0] ?? pick(restaurants);
   const dinner = [...restaurants].sort((a, b) => score(b, prefs) + sigunguBoost(b) - (score(a, prefs) + sigunguBoost(a)))[1] ?? pick(restaurants);
   const attraction = [...attractions].sort((a, b) => score(b, prefs) + sigunguBoost(b) - (score(a, prefs) + sigunguBoost(a)))[0] ?? pick(attractions);
-  // 숙소(온천/사우나 보유) 추천 — includeLodging이면 저녁 이후에 배치
-  const lodging = includeLodging
-    ? region.places.find((p) => p.type === "lodging" && (p.hasOnsen || p.hasSauna) && (!sigungu || p.sigungu === sigungu))
+  // 숙소 추천: includeLodging이거나 다일차(2일+) 여행이면 마지막에 배치
+  // 온천/사우나 보유 숙소 우선, 없으면 일반 숙소도 포함(카카오 호텔 대부분 플래그 없음)
+  const wantLodging = includeLodging || day >= 2;
+  const lodgings = wantLodging ? region.places.filter((p) => p.type === "lodging") : [];
+  const lodging = lodgings.length
+    ? [...lodgings].sort((a, b) => {
+        const aO = a.hasOnsen || a.hasSauna ? 2 : 0;
+        const bO = b.hasOnsen || b.hasSauna ? 2 : 0;
+        if (aO !== bO) return bO - aO;
+        return score(b, prefs) + sigunguBoost(b) - (score(a, prefs) + sigunguBoost(a));
+      })[(day - 1) % lodgings.length]
     : undefined;
 
   const stops: CourseStop[] = [

@@ -22,6 +22,8 @@ export interface KakaoPlace {
 const SAUNA_KW = ["온천", "사우나", "찜질", "스파", "목욕", "욕장", "찜질방", "대온천"];
 // 숙소(호텔/리조트/펜션/모텔) 관련
 const LODGING_KW = ["호텔", "리조트", "펜션", "모텔", "게스트하우스", "민박", "콘도"];
+// 숙소명/카테고리에서 온천·사우나 보유를 추론하는 키워드
+const LODGING_ONSEN_KW = ["온천", "스파", "풀빌라", "워터파크", "족욕", "찜질", "노천"];
 
 // 시군구 중심좌표 기반 반경 검색 (사우나/찜질방/온천/스파)
 export async function searchKakaoSauna(
@@ -111,6 +113,7 @@ export function kakaoToPlace(
   const addr = d.road_address_name || d.address_name || undefined;
   const city = addr?.split(/\s+/).slice(0, 2).join(" ") ?? regionId;
   const type: Place["type"] = isLodging ? "lodging" : isOnsen ? "spa" : "sauna";
+  const lodgingHasOnsen = isLodging && LODGING_ONSEN_KW.some((k) => blob.includes(k.toLowerCase()));
   const place: Place = {
     id: `kk-${regionId}-${sigunguId}-${isLodging ? "l" : "s"}-${idx}`,
     name: d.place_name,
@@ -131,8 +134,8 @@ export function kakaoToPlace(
     lng,
     homepage: d.place_url,
     tel: d.phone,
-    hasOnsen: isOnsen || undefined,
-    hasSauna: !isOnsen || undefined,
+    hasOnsen: (isOnsen || lodgingHasOnsen) || undefined,
+    hasSauna: (!isOnsen || isLodging) || undefined,
   };
   return { ...place, rating: computeRating(place) };
 }

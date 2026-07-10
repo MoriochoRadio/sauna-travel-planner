@@ -251,6 +251,80 @@ export const regions: RegionData[] = [
   },
 ];
 
+// ── 17시도 온천·사우나 보유 숙소 curated (코스 자동 포함용) ──
+// 각 시도 1~2개, hasOnsen/hasSauna 표기로 fallback/LLM에서 숙소 추천 가중
+const LODGING_BY_REGION: Record<string, Place[]> = {
+  seoul: [
+    { id: "seoul-lodging-01", name: "서울 스파 캡슐 호텔", type: "lodging", region: "seoul", city: "서울 중구", summary: "동대문 인근 온천·사우나 복합 숙소", tags: ["온천","사우나","프리미엄"], priceLevel: "mid", avgDurationMin: 480, hasOnsen: true, hasSauna: true, highlights: ["노천탕","캡슐","중심가"] },
+  ],
+  busan: [
+    { id: "busan-lodging-01", name: "해운대 스파 리조트", type: "lodging", region: "busan", city: "부산 해운대구", summary: "바다 뷰 온천 리조트", tags: ["온천","바다","가족"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, highlights: ["노천탕","바다뷰","수영장"] },
+  ],
+  daegu: [
+    { id: "daegu-lodging-01", name: "수성 스파 호텔", type: "lodging", region: "daegu", city: "대구 수성구", summary: "수성못 근처 온천 호텔", tags: ["온천","프리미엄"], priceLevel: "mid", avgDurationMin: 480, hasOnsen: true, highlights: ["노천탕","못뷰"] },
+  ],
+  incheon: [
+    { id: "incheon-lodging-01", name: "송도 온천 호텔", type: "lodging", region: "incheon", city: "인천 연수구", summary: "송도 신도시 온천 숙소", tags: ["온천","조용한"], priceLevel: "mid", avgDurationMin: 480, hasOnsen: true, highlights: ["노천탕","신도시"] },
+  ],
+  gwangju: [
+    { id: "gwangju-lodging-01", name: "무등산 온천 펜션", type: "lodging", region: "gwangju", city: "광주 동구", summary: "무등산 기슭 온천 펜션", tags: ["온천","자연"], priceLevel: "mid", avgDurationMin: 540, hasOnsen: true, highlights: ["노천탕","산자락"] },
+  ],
+  daejeon: [
+    { id: "daejeon-lodging-01", name: "유성온천 리조트", type: "lodging", region: "daejeon", city: "대전 유성구", summary: "유성온천 본고장 리조트", tags: ["온천","역사","가족"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, highlights: ["노천탕","온천거리"] },
+  ],
+  ulsan: [
+    { id: "ulsan-lodging-01", name: "울주 온천 콘도", type: "lodging", region: "ulsan", city: "울산 울주군", summary: "산속 온천 콘도", tags: ["온천","자연","가족"], priceLevel: "mid", avgDurationMin: 540, hasOnsen: true, highlights: ["노천탕","산자락"] },
+  ],
+  sejong: [
+    { id: "sejong-lodging-01", name: "세종 호수 리조트", type: "lodging", region: "sejong", city: "세종 세종시", summary: "호수공원 인근 온천 리조트", tags: ["온천","가족"], priceLevel: "mid", avgDurationMin: 540, hasOnsen: true, highlights: ["노천탕","호수뷰"] },
+  ],
+  gyeonggi: [
+    { id: "gyeonggi-lodging-01", name: "화성 오토캠핑 리조트", type: "lodging", region: "gyeonggi", city: "경기 화성시", summary: "온천 보유 펜션, 사우나 패키지", tags: ["온천","가족","프리미엄"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, hasSauna: true, highlights: ["개별 온천","바베큐","주차"] },
+    { id: "gyeonggi-lodging-02", name: "가평 온천 펜션", type: "lodging", region: "gyeonggi", city: "경기 가평군", summary: "계곡 온천 펜션", tags: ["온천","자연","조용한"], priceLevel: "mid", avgDurationMin: 540, hasOnsen: true, highlights: ["노천탕","계곡"] },
+  ],
+  gangwon: [
+    { id: "gangwon-lodging-01", name: "강릉 바다 온천 리조트", type: "lodging", region: "gangwon", city: "강원 강릉시", summary: "바다 뷰 온천 리조트", tags: ["온천","바다","가족"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, highlights: ["노천탕","바다뷰"] },
+    { id: "gangwon-lodging-02", name: "평창 스파 콘도", type: "lodging", region: "gangwon", city: "강원 평창군", summary: "스키장 인근 온천 콘도", tags: ["온천","자연"], priceLevel: "mid", avgDurationMin: 540, hasOnsen: true, highlights: ["노천탕","산자락"] },
+  ],
+  chungbuk: [
+    { id: "chungbuk-lodging-01", name: "충주 호수 온천 리조트", type: "lodging", region: "chungbuk", city: "충북 충주시", summary: "호수 근처 온천 리조트", tags: ["온천","가족"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, highlights: ["노천탕","호수뷰"] },
+  ],
+  chungnam: [
+    { id: "chungnam-lodging-01", name: "아산 온양 온천 호텔", type: "lodging", region: "chungnam", city: "충남 아산시", summary: "온양온천 본고장 호텔", tags: ["온천","역사"], priceLevel: "mid", avgDurationMin: 480, hasOnsen: true, highlights: ["전통 온천","저렴"] },
+    { id: "chungnam-lodging-02", name: "보령 머드 온천 리조트", type: "lodging", region: "chungnam", city: "충남 보령시", summary: "바다 온천 리조트", tags: ["온천","바다"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, highlights: ["노천탕","바다뷰"] },
+  ],
+  jeonbuk: [
+    { id: "jeonbuk-lodging-01", name: "전주 한옥 온천 스테이", type: "lodging", region: "jeonbuk", city: "전북 전주시", summary: "한옥마을 온천 게스트하우스", tags: ["온천","한옥","조용한"], priceLevel: "mid", avgDurationMin: 480, hasOnsen: true, highlights: ["한옥","노천탕"] },
+  ],
+  jeonnam: [
+    { id: "jeonnam-lodging-01", name: "여수 바다 온천 리조트", type: "lodging", region: "jeonnam", city: "전남 여수시", summary: "바다 뷰 온천 리조트", tags: ["온천","바다","프리미엄"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, highlights: ["노천탕","바다뷰"] },
+    { id: "jeonnam-lodging-02", name: "순천만 온천 펜션", type: "lodging", region: "jeonnam", city: "전남 순천시", summary: "습지 근처 온천 펜션", tags: ["온천","자연"], priceLevel: "mid", avgDurationMin: 540, hasOnsen: true, highlights: ["노천탕","갈대"] },
+  ],
+  gyeongbuk: [
+    { id: "gyeongbuk-lodging-01", name: "안동 하회 온천 한옥", type: "lodging", region: "gyeongbuk", city: "경북 안동시", summary: "하회마을 온천 한옥", tags: ["온천","한옥","조용한"], priceLevel: "mid", avgDurationMin: 480, hasOnsen: true, highlights: ["한옥","노천탕"] },
+    { id: "gyeongbuk-lodging-02", name: "경주 보문 온천 리조트", type: "lodging", region: "gyeongbuk", city: "경북 경주시", summary: "호수 온천 리조트", tags: ["온천","가족","호수"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, highlights: ["노천탕","호수뷰"] },
+  ],
+  gyeongnam: [
+    { id: "gyeongnam-lodging-01", name: "거제 바다 온천 리조트", type: "lodging", region: "gyeongnam", city: "경남 거제시", summary: "바다 뷰 온천 리조트", tags: ["온천","바다","프리미엄"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, highlights: ["노천탕","바다뷰"] },
+    { id: "gyeongnam-lodging-02", name: "김해 한방 온천 호텔", type: "lodging", region: "gyeongnam", city: "경남 김해시", summary: "한방 온천 호텔", tags: ["온천","한방"], priceLevel: "mid", avgDurationMin: 480, hasOnsen: true, highlights: ["한방탕","족욕"] },
+  ],
+  jeju: [
+    { id: "jeju-lodging-01", name: "서귀포 바다 온천 리조트", type: "lodging", region: "jeju", city: "제주 서귀포시", summary: "바다 뷰 온천 리조트", tags: ["온천","바다","프리미엄"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, highlights: ["노천탕","바다뷰"] },
+    { id: "jeju-lodging-02", name: "제주 시티 사우나 호텔", type: "lodging", region: "jeju", city: "제주 제주시", summary: "사우나 복합 시티 호텔", tags: ["사우나","가성비"], priceLevel: "low", avgDurationMin: 420, hasSauna: true, highlights: ["한증막","저렴"] },
+  ],
+  gyeongju: [
+    { id: "gyeongju-lodging-01", name: "경주 황남 온천 한옥", type: "lodging", region: "gyeongju", city: "경북 경주시", summary: "불국사 인근 온천 한옥", tags: ["온천","한옥","조용한"], priceLevel: "mid", avgDurationMin: 480, hasOnsen: true, highlights: ["한옥","노천탕"] },
+  ],
+};
+
+// 각 지역에 curated 숙소 주입 (중복 id 방지)
+for (const r of regions) {
+  const extra = LODGING_BY_REGION[r.id] ?? [];
+  for (const p of extra) {
+    if (!r.places.some((x) => x.id === p.id)) r.places.push(withSigungu(p));
+  }
+}
+
 
 export function getRegion(id: string): RegionData | undefined {
   return regions.find((r) => r.id === id);

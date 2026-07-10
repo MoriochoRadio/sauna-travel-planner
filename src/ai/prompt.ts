@@ -62,11 +62,15 @@ export function userPrompt(input: PlannerInput, region: RegionData): string {
     ? "\n숙소: 온천/사우나를 보유한 숙소(lodging, hasOnsen/hasSauna)를 저녁 이후 마지막 stop으로 추천하세요."
     : "";
 
+  const sigunguLine = input.sigungu
+    ? `\n세부 지역(시군구): ${input.sigungu} — 해당 시군구(sigungu 필드 일치) 장소를 우선 배치하세요.`
+    : "";
+
   return `[입력]
 지역: ${region.name}
 기간: ${input.days}일
 취향: ${prefs}
-특이사항: ${note}${anchorLine}${onsenLine}${lodgingLine}
+특이사항: ${note}${anchorLine}${onsenLine}${lodgingLine}${sigunguLine}
 
 [장소 데이터]
 ${JSON.stringify(region.places, null, 2)}

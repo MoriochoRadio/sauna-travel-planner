@@ -6,6 +6,7 @@ const PREFS: Preference[] = ["quiet", "budget", "premium", "family", "solo", "ou
 export function encodeInputToQuery(input: PlannerInput): string {
   const p = new URLSearchParams();
   p.set("region", input.region);
+  if (input.sigungu) p.set("sigungu", input.sigungu);
   p.set("days", String(input.days));
   if (input.preferences.length) p.set("prefs", input.preferences.join(","));
   if (input.note) p.set("note", input.note);
@@ -29,7 +30,8 @@ export function decodeInputFromQuery(qs: string): PlannerInput | null {
   const anchorSaunaId = p.get("sauna") ?? undefined;
   const onsenFocus = p.get("onsen") === "1";
   const includeLodging = p.get("lodging") !== "0";
-  return { region: region as PlannerInput["region"], days, preferences, note, anchorSaunaId, onsenFocus, includeLodging };
+  const sigungu = p.get("sigungu") ?? undefined;
+  return { region: region as PlannerInput["region"], days, preferences, note, anchorSaunaId, onsenFocus, includeLodging, sigungu };
 }
 
 // 생성된 코스를 공유용 문자열로 압축 (날짜/지역/기간/취향 요약)

@@ -41,10 +41,30 @@ async function fetchAll(areaCode, contentTypeId) {
 // areaBasedList2 응답에 mapx/mapy/homepage가 이미 포함되므로 detailCommon2 호출 불필요
 const SAUNA_KW = ["온천", "사우나", "찜질", "스파", "목욕", "욕장", "찜질방", "hotspring", "spa", "대온천"];
 
+// 동기화 스크립트용 시군구 매핑 (sigungu.ts와 동일 로직, .mjs 호환)
+const SIGUNGU = [
+  { region: "seoul", name: "중구", full: "서울 중구" }, { region: "seoul", name: "영등포구", full: "서울 영등포구" },
+  { region: "seoul", name: "용산구", full: "서울 용산구" }, { region: "seoul", name: "종로구", full: "서울 종로구" }, { region: "seoul", name: "강남구", full: "서울 강남구" },
+  { region: "busan", name: "해운대구", full: "부산 해운대구" }, { region: "busan", name: "수영구", full: "부산 수영구" }, { region: "busan", name: "동래구", full: "부산 동래구" }, { region: "busan", name: "부산진구", full: "부산 부산진구" }, { region: "busan", name: "사하구", full: "부산 사하구" },
+  { region: "gangwon", name: "평창군", full: "강원 평창군" }, { region: "gangwon", name: "강릉시", full: "강원 강릉시" }, { region: "gangwon", name: "춘천시", full: "강원 춘천시" }, { region: "gangwon", name: "속초시", full: "강원 속초시" },
+  { region: "gyeongju", name: "경주시", full: "경북 경주시" },
+  { region: "jeju", name: "제주시", full: "제주 제주시" }, { region: "jeju", name: "서귀포시", full: "제주 서귀포시" },
+  { region: "incheon", name: "계양구", full: "인천 계양구" }, { region: "incheon", name: "연수구", full: "인천 연수구" }, { region: "incheon", name: "중구", full: "인천 중구" },
+  { region: "daejeon", name: "유성구", full: "대전 유성구" }, { region: "daejeon", name: "서구", full: "대전 서구" }, { region: "daejeon", name: "중구", full: "대전 중구" },
+  { region: "gwangju", name: "동구", full: "광주 동구" }, { region: "gwangju", name: "서구", full: "광주 서구" }, { region: "gwangju", name: "북구", full: "광주 북구" },
+  { region: "daegu", name: "달서구", full: "대구 달서구" }, { region: "daegu", name: "중구", full: "대구 중구" }, { region: "daegu", name: "남구", full: "대구 남구" }, { region: "daegu", name: "수성구", full: "대구 수성구" },
+];
+function findSigunguLocal(regionId, cityText) {
+  const t = (cityText || "").trim();
+  const found = SIGUNGU.find((s) => s.region === regionId && (s.full === t || s.name === t));
+  return found ? `${regionId}-${found.name}` : undefined;
+}
+
 // tourAPI raw item → 우리 도메인 Place 객체로 매핑
 function toPlace(item, regionId, type, idx) {
   const addr = (item.addr1 || "").trim();
   const city = addr.split(/\s+/).slice(0, 2).join(" ") || regionId;
+  const sigungu = findSigunguLocal(regionId, city);
   const tel = (item.tel || "").trim();
   return {
     id: `${regionId}-${type === "restaurant" ? "food" : type === "lodging" ? "stay" : "att"}-api-${idx}`,
@@ -52,6 +72,7 @@ function toPlace(item, regionId, type, idx) {
     type,
     region: regionId,
     city,
+    sigungu: sigungu || undefined,
     summary: type === "restaurant"
       ? "tourAPI 등록 맛집 — 사우나 전후 식사 코스"
       : type === "lodging"

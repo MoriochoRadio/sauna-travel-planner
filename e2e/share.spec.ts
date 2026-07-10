@@ -13,7 +13,7 @@ test("공유 URL로 진입하면 해당 설정으로 코스가 자동 생성된�
 
 test("지도 링크가 각 stop에 존재한다", async ({ page }) => {
   await page.goto("/");
-  await page.getByLabel("지역 선택").selectOption("jeju");
+  await page.getByLabel("지역 선택", { exact: true }).selectOption("jeju");
   await page.getByRole("button", { name: "다음: 사우나 고르기 →" }).click();
   await expect(page.getByText("사우나·온천 지도 (제주)")).toBeVisible();
   await page.getByRole("button", { name: /추천 받기 →/ }).click();

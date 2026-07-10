@@ -29,9 +29,11 @@ function buildDay(
   region: RegionData,
   prefs: Preference[],
   note: string | undefined,
-  opts: { anchorSauna?: Place; onsenFocus?: boolean; includeLodging?: boolean }
+  opts: { anchorSauna?: Place; onsenFocus?: boolean; includeLodging?: boolean; sigungu?: string }
 ): Day {
-  const { anchorSauna, onsenFocus, includeLodging } = opts;
+  const { anchorSauna, onsenFocus, includeLodging, sigungu } = opts;
+  // 시군구 가중 (세부 지역 지정 시 해당 동네 장소 우선)
+  const sigunguBoost = (p: Place) => (sigungu && p.sigungu === sigungu ? 5 : 0);
   // 핵심(사우나/온천/찜질방) 후보 — 선택 사우나 제외
   const saunaLike = region.places.filter(
     (p) => ["sauna", "jjimjilbang", "spa"].includes(p.type) && p.id !== anchorSauna?.id
@@ -43,7 +45,7 @@ function buildDay(
       const bO = b.type === "spa" ? 2 : 0;
       if (aO !== bO) return bO - aO;
     }
-    return score(b, prefs) - score(a, prefs);
+    return score(b, prefs) + sigunguBoost(b) - (score(a, prefs) + sigunguBoost(a));
   };
   const restaurants = region.places.filter((p) => p.type === "restaurant");
   const attractions = region.places.filter((p) => p.type === "attraction");
@@ -51,12 +53,12 @@ function buildDay(
   // 첫 stop = 선택 사우나(있으면), 없으면 점수 높은 핵심
   const first = anchorSauna ?? [...saunaLike].sort(sortCore)[0];
   const second = [...saunaLike].sort(sortCore)[0] ?? pick(saunaLike);
-  const lunch = [...restaurants].sort((a, b) => score(b, prefs) - score(a, prefs))[0] ?? pick(restaurants);
-  const dinner = [...restaurants].sort((a, b) => score(b, prefs) - score(a, prefs))[1] ?? pick(restaurants);
-  const attraction = [...attractions].sort((a, b) => score(b, prefs) - score(a, prefs))[0] ?? pick(attractions);
+  const lunch = [...restaurants].sort((a, b) => score(b, prefs) + sigunguBoost(b) - (score(a, prefs) + sigunguBoost(a)))[0] ?? pick(restaurants);
+  const dinner = [...restaurants].sort((a, b) => score(b, prefs) + sigunguBoost(b) - (score(a, prefs) + sigunguBoost(a)))[1] ?? pick(restaurants);
+  const attraction = [...attractions].sort((a, b) => score(b, prefs) + sigunguBoost(b) - (score(a, prefs) + sigunguBoost(a)))[0] ?? pick(attractions);
   // 숙소(온천/사우나 보유) 추천 — includeLodging이면 저녁 이후에 배치
   const lodging = includeLodging
-    ? region.places.find((p) => p.type === "lodging" && (p.hasOnsen || p.hasSauna))
+    ? region.places.find((p) => p.type === "lodging" && (p.hasOnsen || p.hasSauna) && (!sigungu || p.sigungu === sigungu))
     : undefined;
 
   const stops: CourseStop[] = [
@@ -127,6 +129,7 @@ export function fallbackCourse(input: PlannerInput, region: RegionData): Course 
         anchorSauna: d === 1 ? anchorSauna : undefined, // 선택 사우나는 1일차에 고정
         onsenFocus: input.onsenFocus,
         includeLodging: input.includeLodging,
+        sigungu: input.sigungu,
       })
     );
   }

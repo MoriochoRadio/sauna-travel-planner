@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import type { PlannerInput, Preference, Place } from "@/data/schema";
 import { getRegion } from "@/data/seed";
+import { getSigungus, type Sigungu } from "@/data/sigungu";
 import { CourseView } from "./CourseView";
 import { CourseSkeleton } from "./CourseSkeleton";
 import { SaunaMap } from "./SaunaMap";
+import { RegionMapPicker } from "./RegionMapPicker";
 import type { Course } from "./types";
 
 const REGIONS = [
@@ -34,6 +36,7 @@ type Step = 1 | 2 | 3;
 
 export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: PlannerInput | null; autoSubmit?: boolean }) {
   const [region, setRegion] = useState<PlannerInput["region"]>(initialInput?.region ?? "gangwon");
+  const [sigungu, setSigungu] = useState<string | undefined>(initialInput?.sigungu);
   const [onsenFocus, setOnsenFocus] = useState(initialInput?.onsenFocus ?? false);
   const [days, setDays] = useState(initialInput?.days ?? 2);
   const [prefs, setPrefs] = useState<Preference[]>(initialInput?.preferences ?? []);
@@ -57,6 +60,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
     try {
       const body: PlannerInput = {
         region,
+        sigungu,
         days,
         preferences: prefs,
         note: note || undefined,
@@ -90,10 +94,20 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSubmit]);
 
-  // 지역 바뀌면 선택 사우나 초기화
+  // 지역 바뀌면 선택 사우나/시군구 초기화
   const onRegionChange = (id: PlannerInput["region"]) => {
     setRegion(id);
+    setSigungu(undefined);
     setAnchorSaunaId(undefined);
+  };
+
+  // 지도/드롭다운에서 시군구 선택 시 해당 region인지 보정
+  const onSigunguSelect = (s: Sigungu) => {
+    if (s.region !== region) {
+      setRegion(s.region);
+      setAnchorSaunaId(undefined);
+    }
+    setSigungu(s.id);
   };
 
   if (course) {
@@ -114,7 +128,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
           type="button"
           className="btn-secondary w-full"
           onClick={() => {
-            const url = `${window.location.origin}/?region=${region}&days=${days}${prefs.length ? `&prefs=${prefs.join(",")}` : ""}${anchorSaunaId ? `&sauna=${anchorSaunaId}` : ""}${onsenFocus ? "&onsen=1" : ""}${!includeLodging ? "&lodging=0" : ""}${note ? `&note=${encodeURIComponent(note)}` : ""}`;
+            const url = `${window.location.origin}/?region=${region}${sigungu ? `&sigungu=${sigungu}` : ""}&days=${days}${prefs.length ? `&prefs=${prefs.join(",")}` : ""}${anchorSaunaId ? `&sauna=${anchorSaunaId}` : ""}${onsenFocus ? "&onsen=1" : ""}${!includeLodging ? "&lodging=0" : ""}${note ? `&note=${encodeURIComponent(note)}` : ""}`;
             navigator.clipboard?.writeText(url);
             alert("공유 URL이 클립보드에 복사됐어요!\n" + url);
           }}
@@ -152,6 +166,29 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
               ))}
             </select>
           </div>
+
+          <div>
+            <h2 className="font-bold mb-3">세부 지역 (시군구)</h2>
+            <select
+              name="sigungu"
+              className="w-full border rounded-lg p-3 min-h-[44px] mb-3"
+              value={sigungu ?? ""}
+              onChange={(e) => {
+                const id = e.target.value;
+                if (!id) { setSigungu(undefined); return; }
+                const s = getSigungus(region).find((x) => x.id === id);
+                if (s) onSigunguSelect(s);
+              }}
+              aria-label="세부 지역 선택"
+            >
+              <option value="">전체 (세부 지역 미지정)</option>
+              {getSigungus(region).map((s) => (
+                <option key={s.id} value={s.id}>{s.fullName}</option>
+              ))}
+            </select>
+            <RegionMapPicker region={region} selectedId={sigungu} onSelect={onSigunguSelect} />
+          </div>
+
           <div>
             <h2 className="font-bold mb-3">여행 모드</h2>
             <div className="flex gap-2">

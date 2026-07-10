@@ -1,21 +1,27 @@
 import type { RegionData, Place } from "./schema";
 import { enrichedPlaces } from "./seed.enriched";
+import { findSigungu } from "./sigungu";
 
 // ───────────────────────────────────────────────────────────
 // Phase 1+B 전체 시드 데이터셋 (지역 9곳)
 // 하이브리드: 사우나/온천 = curated(실제 선별 + tourAPI 검증),
 //            맛집/볼거리 = curated + tourAPI 보강(seed.enriched.ts 병합).
-// enriched 파일은 scripts/sync-tourapi.mjs가 생성(주간 CI 자동 커밋).
-// ───────────────────────────────────────────────────────────
+
+// curated place의 city 텍스트에서 시군구 id 자동 매핑
+function withSigungu(p: Place): Place {
+  if (p.sigungu) return p;
+  const s = findSigungu(p.region, p.city);
+  return s ? { ...p, sigungu: s.id } : p;
+}
 
 // curated + tourAPI 보강 병합 (중복 id 제거)
 function mergeRegionPlaces(curated: Place[], regionId: string): Place[] {
   const enriched = enrichedPlaces[regionId] ?? [];
-  const merged = [...curated];
+  const merged = curated.map(withSigungu);
   const seen = new Set(curated.map((p) => p.id));
   for (const p of enriched) {
     if (!seen.has(p.id)) {
-      merged.push(p);
+      merged.push(withSigungu(p));
       seen.add(p.id);
     }
   }

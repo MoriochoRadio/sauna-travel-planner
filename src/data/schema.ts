@@ -27,6 +27,7 @@ export const PlaceSchema = z.object({
   type: PlaceType,
   region: Region,
   city: z.string(),                            // 상세 시군구 (예: "서울 중구")
+  sigungu: z.string().optional(),              // 시군구 id (예: "seoul-jung") — 지도/드롭다운 선택용
   summary: z.string(),                         // 한 줄 설명
   tags: z.array(z.string()),                   // ["황토","족욕","가성비"]
   priceLevel: PriceLevel,
@@ -66,6 +67,7 @@ export type Preference = z.infer<typeof Preference>;
 // ── 플래너 입력 ─────────────────────────────────────────────
 export const PlannerInputSchema = z.object({
   region: Region,
+  sigungu: z.string().optional(),              // 세부 시군구 id (지도/드롭다운 선택)
   days: z.number().int().min(1).max(4),
   preferences: z.array(Preference).default([]),
   note: z.string().optional(),                 // 특이사항 자유텍스트

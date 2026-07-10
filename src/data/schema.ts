@@ -36,7 +36,7 @@ export const PlaceSchema = z.object({
   url: z.string().url().optional(),
   openHours: z.string().optional(),            // 예: "06:00-22:00"
   highlights: z.array(z.string()),             // 추천 포인트
-  source: z.enum(["curated", "tourapi"]).optional(), // 데이터 출처
+  source: z.enum(["curated", "tourapi", "kakao"]).optional(), // 데이터 출처
   // 숙소(lodging)가 보유한 온천/사우나 시설
   hasOnsen: z.boolean().optional(),            // 노천/실내 온천 보유
   hasSauna: z.boolean().optional(),            // 사우나/찜질방 보유

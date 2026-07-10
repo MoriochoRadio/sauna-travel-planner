@@ -58,16 +58,16 @@ test("세부 지역(시군구) 드롭다운 선택이 동작한다", async ({ pa
   const sigunguSelect = page.getByRole("combobox", { name: "세부 지역 선택" });
   await expect(sigunguSelect).toBeVisible();
   await expect(sigunguSelect).toContainText("서울 중구");
-  await expect(sigunguSelect).toContainText("서울 강남구");
-  await sigunguSelect.selectOption("seoul-jung");
-  await expect(sigunguSelect).toHaveValue("seoul-jung");
+  await expect(sigunguSelect).toContainText("서울 종로구");
+  await sigunguSelect.selectOption("seoul-중구");
+  await expect(sigunguSelect).toHaveValue("seoul-중구");
 });
 
 test("세부 지역 지정 시 공유 URL에 sigungu이 보존된다", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("지역 선택", { exact: true }).selectOption("daegu");
   const sigunguSelect = page.getByRole("combobox", { name: "세부 지역 선택" });
-  await sigunguSelect.selectOption("daegu-suseong");
+  await sigunguSelect.selectOption("daegu-수성구");
   await page.getByRole("button", { name: "다음: 사우나 고르기 →" }).click();
   await page.getByRole("button", { name: /추천 받기 →/ }).click();
   await page.getByRole("button", { name: "코스 만들기" }).click();
@@ -76,10 +76,10 @@ test("세부 지역 지정 시 공유 URL에 sigungu이 보존된다", async ({ 
   // 공유 URL 복사
   page.on("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "🔗 코스 공유 URL 복사" }).click();
-  const url = await page.evaluate(() => window.location.origin + "/?region=daegu&sigungu=daegu-suseong&days=2&auto=0");
+  const url = await page.evaluate(() => window.location.origin + "/?region=daegu&sigungu=daegu-수성구&days=2&auto=0");
   await page.goto(url);
   // 라운드트립: 드롭다운에 값 복원
-  await expect(page.getByRole("combobox", { name: "세부 지역 선택" }).first()).toHaveValue("daegu-suseong");
+  await expect(page.getByRole("combobox", { name: "세부 지역 선택" }).first()).toHaveValue("daegu-수성구");
 });
 
 test("전국 지도 탭에서 임의 시군구를 자유롭게 선택할 수 있다", async ({ page }) => {

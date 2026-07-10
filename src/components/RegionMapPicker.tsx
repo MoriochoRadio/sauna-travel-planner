@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Region } from "@/data/schema";
-import { getSigungus, getAllSigungus, findSigunguById, nearestSigungu, type Sigungu } from "@/data/sigungu";
+import { getSigungus, getAllSigungus, findSigunguById, nearestSigunguInRegion, type Sigungu } from "@/data/sigungu";
 
 // Leaflet 동적 로드 (한 번만)
 let leafletLoading: Promise<any> | null = null;
@@ -90,7 +90,7 @@ export function RegionMapPicker({
         map.on("click", (e: any) => {
           const found = mode === "nationwide"
             ? nearestNationwide(e.latlng.lat, e.latlng.lng)
-            : nearestSigungu(region!, e.latlng.lat, e.latlng.lng);
+            : nearestSigunguInRegion(region!, e.latlng.lat, e.latlng.lng);
           if (found) onSelect(found);
         });
 

@@ -61,7 +61,15 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                     </div>
                     <div className="text-xs text-bark/70">{s.reason}</div>
                     {place && (
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs">
+                        {typeof place.rating === "number" && (
+                          <span className="inline-flex items-center gap-0.5 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-700" title="추천지수 (자체 산출)">
+                            ★ {place.rating.toFixed(1)}
+                          </span>
+                        )}
+                        {place.hasOnsen && <span className="rounded bg-rose-100 px-1.5 py-0.5 text-rose-700">♨ 온천</span>}
+                        {place.hasSauna && <span className="rounded bg-sky-100 px-1.5 py-0.5 text-sky-700">🧖 사우나</span>}
+                        {place.type === "lodging" && <span className="rounded bg-violet-100 px-1.5 py-0.5 text-violet-700">🏨 숙소</span>}
                         {place.tel && <span className="text-gray-500">☎ {place.tel}</span>}
                         {place.address && <span className="text-gray-500">{place.address}</span>}
                         <a href={kakaoMapUrl(place)} target="_blank" rel="noopener noreferrer" className="text-gray-500 underline">카카오맵</a>

@@ -4094,12 +4094,12 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "lng": 127.6393291693
     }
   ],
-  "gyeongju": [
+  "gyeongbuk": [
     {
       "id": "gyeongju-food-api-1",
       "name": "가마솥 양푼이 밥상",
       "type": "restaurant",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 맛집 — 사우나 전후 식사 코스",
       "tags": [
@@ -4121,7 +4121,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-food-api-2",
       "name": "가봉반과",
       "type": "restaurant",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 맛집 — 사우나 전후 식사 코스",
       "tags": [
@@ -4143,7 +4143,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-food-api-3",
       "name": "가정초밥 효자점",
       "type": "restaurant",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 포항시",
       "summary": "tourAPI 등록 맛집 — 사우나 전후 식사 코스",
       "tags": [
@@ -4165,7 +4165,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-food-api-4",
       "name": "갈치조림 토박이식당",
       "type": "restaurant",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 맛집 — 사우나 전후 식사 코스",
       "tags": [
@@ -4187,7 +4187,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-food-api-5",
       "name": "개운궁",
       "type": "restaurant",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 상주시",
       "summary": "tourAPI 등록 맛집 — 사우나 전후 식사 코스",
       "tags": [
@@ -4209,7 +4209,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-food-api-6",
       "name": "개울가식당",
       "type": "restaurant",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경산시",
       "summary": "tourAPI 등록 맛집 — 사우나 전후 식사 코스",
       "tags": [
@@ -4231,7 +4231,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-food-api-7",
       "name": "개진고로케",
       "type": "restaurant",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 고령군",
       "summary": "tourAPI 등록 맛집 — 사우나 전후 식사 코스",
       "tags": [
@@ -4253,7 +4253,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-food-api-8",
       "name": "경산예찬한우",
       "type": "restaurant",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경산시",
       "summary": "tourAPI 등록 맛집 — 사우나 전후 식사 코스",
       "tags": [
@@ -4275,7 +4275,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-att-api-1",
       "name": "가래실문화마을(별별미술마을)",
       "type": "attraction",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 영천시",
       "summary": "tourAPI 등록 볼거리 — 사우나 사이 완충 코스",
       "tags": [
@@ -4297,7 +4297,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-att-api-2",
       "name": "가산수피아",
       "type": "attraction",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 칠곡군",
       "summary": "tourAPI 등록 볼거리 — 사우나 사이 완충 코스",
       "tags": [
@@ -4319,7 +4319,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-att-api-3",
       "name": "가오실공원",
       "type": "attraction",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 예천군",
       "summary": "tourAPI 등록 볼거리 — 사우나 사이 완충 코스",
       "tags": [
@@ -4341,7 +4341,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-att-api-4",
       "name": "감못(부지)",
       "type": "attraction",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경산시",
       "summary": "tourAPI 등록 볼거리 — 사우나 사이 완충 코스",
       "tags": [
@@ -4363,7 +4363,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-att-api-5",
       "name": "감응사(성주)",
       "type": "attraction",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 성주군",
       "summary": "tourAPI 등록 볼거리 — 사우나 사이 완충 코스",
       "tags": [
@@ -4385,7 +4385,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-att-api-6",
       "name": "감포항",
       "type": "attraction",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 볼거리 — 사우나 사이 완충 코스",
       "tags": [
@@ -4407,7 +4407,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-att-api-7",
       "name": "강동 워터파크",
       "type": "attraction",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 볼거리 — 사우나 사이 완충 코스",
       "tags": [
@@ -4429,7 +4429,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-att-api-8",
       "name": "강동리조트 프라이빗콘도",
       "type": "attraction",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 볼거리 — 사우나 사이 완충 코스",
       "tags": [
@@ -4451,7 +4451,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-stay-api-1",
       "name": "가람초연재",
       "type": "lodging",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 안동시",
       "summary": "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요",
       "tags": [
@@ -4474,7 +4474,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-stay-api-2",
       "name": "가야호텔",
       "type": "lodging",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 성주군",
       "summary": "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요",
       "tags": [
@@ -4497,7 +4497,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-stay-api-3",
       "name": "강이있는풍경펜션",
       "type": "lodging",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 문경시",
       "summary": "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요",
       "tags": [
@@ -4520,7 +4520,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-stay-api-4",
       "name": "게스트하우스 play at home(플레이앳홈)",
       "type": "lodging",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 안동시",
       "summary": "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요",
       "tags": [
@@ -4543,7 +4543,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-stay-api-5",
       "name": "경주 감포한옥펜션",
       "type": "lodging",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요",
       "tags": [
@@ -4566,7 +4566,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-stay-api-6",
       "name": "경주 교동한옥집",
       "type": "lodging",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요",
       "tags": [
@@ -4589,7 +4589,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-stay-api-7",
       "name": "경주 오릉 한옥",
       "type": "lodging",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요",
       "tags": [
@@ -4612,7 +4612,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-stay-api-8",
       "name": "경주 춘추관",
       "type": "lodging",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요",
       "tags": [
@@ -4635,7 +4635,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-stay-api-9",
       "name": "경주 한옥(경주한옥펜션)",
       "type": "lodging",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요",
       "tags": [
@@ -4658,7 +4658,7 @@ export const enrichedPlaces: Record<string, Place[]> = {
       "id": "gyeongju-stay-api-10",
       "name": "경주수호정",
       "type": "lodging",
-      "region": "gyeongju",
+      "region": "gyeongbuk",
       "city": "경상북도 경주시",
       "summary": "tourAPI 등록 숙소 — 온천/사우나 보유 여부 확인 필요",
       "tags": [
@@ -5365,7 +5365,7 @@ export const enrichedSummary = [
     ]
   },
   {
-    "region": "gyeongju",
+    "region": "gyeongbuk",
     "foodCount": 460,
     "attrCount": 483,
     "stayCount": 214,

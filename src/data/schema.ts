@@ -11,10 +11,25 @@ export const CORE_TYPES: PlaceType[] = ["sauna", "jjimjilbang", "spa", "lodging"
 
 // ── 지역 ────────────────────────────────────────────────────
 export const Region = z.enum([
-  "seoul", "busan", "gangwon", "gyeongju", "jeju",
-  "incheon", "daejeon", "gwangju", "daegu",
+  "seoul", "busan", "daegu", "incheon", "gwangju", "daejeon", "ulsan", "sejong",
+  "gyeonggi", "gangwon", "chungbuk", "chungnam", "jeonbuk", "jeonnam", "gyeongbuk", "gyeongnam", "jeju",
+  "gyeongju", // 경주 (경북 내 온천지구级, 기존 curated 데이터 호환용 독립 region)
 ]);
 export type Region = z.infer<typeof Region>;
+
+// 전국 17시도 한글 명칭
+export const REGION_LABELS: Record<Region, string> = {
+  seoul: "서울", busan: "부산", daegu: "대구", incheon: "인천", gwangju: "광주",
+  daejeon: "대전", ulsan: "울산", sejong: "세종", gyeonggi: "경기", gangwon: "강원",
+  chungbuk: "충북", chungnam: "충남", jeonbuk: "전북", jeonnam: "전남",
+  gyeongbuk: "경북", gyeongnam: "경남", jeju: "제주", gyeongju: "경주",
+};
+
+// 전체 지역 리스트 (드롭다운용)
+export const ALL_REGIONS: Region[] = [
+  "seoul", "busan", "daegu", "incheon", "gwangju", "daejeon", "ulsan", "sejong",
+  "gyeonggi", "gangwon", "chungbuk", "chungnam", "jeonbuk", "jeonnam", "gyeongbuk", "gyeongnam", "jeju", "gyeongju",
+];
 
 // ── 가격대 ──────────────────────────────────────────────────
 export const PriceLevel = z.enum(["low", "mid", "high"]);
@@ -45,6 +60,7 @@ export const PlaceSchema = z.object({
   lng: z.number().optional(),                  // 경도
   homepage: z.string().url().optional(),       // 공식 홈페이지
   tel: z.string().optional(),                  // 전화번호
+  rating: z.number().min(0).max(5).optional(), // 추천지수 (리뷰 대체: tags/가성비/온천보유/거리 종합)
 });
 export type Place = z.infer<typeof PlaceSchema>;
 

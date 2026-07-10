@@ -36,3 +36,7 @@ next-env.d.ts
 .vscode/
 .idea/
 *.swp
+test-results
+scripts/*.run
+scripts/*_run.mjs
+*.mjs.run

@@ -1,17 +1,25 @@
 import type { RegionData, Place } from "./schema";
 import { enrichedPlaces } from "./seed.enriched";
 import { findSigungu } from "./sigungu";
+import { computeRating } from "@/lib/rating";
 
 // ───────────────────────────────────────────────────────────
-// Phase 1+B 전체 시드 데이터셋 (지역 9곳)
+// Phase 1+B 전체 시드 데이터셋 (전국 17시도)
 // 하이브리드: 사우나/온천 = curated(실제 선별 + tourAPI 검증),
-//            맛집/볼거리 = curated + tourAPI 보강(seed.enriched.ts 병합).
+//           맛집/관광 = curated + tourAPI 보강(seed.enriched.ts 병합).
+// curated place의 city 텍스트에서 시군구 id 자동 매핑 + 추천지수 자동 산출
+
+// curated place에 rating 자동 부여
+function withRating(p: Place): Place {
+  return p.rating != null ? p : { ...p, rating: computeRating(p) };
+}
 
 // curated place의 city 텍스트에서 시군구 id 자동 매핑
 function withSigungu(p: Place): Place {
-  if (p.sigungu) return p;
-  const s = findSigungu(p.region, p.city);
-  return s ? { ...p, sigungu: s.id } : p;
+  const base = p.rating != null ? p : withRating(p);
+  if (base.sigungu) return base;
+  const s = findSigungu(base.city);
+  return s ? { ...base, sigungu: s } : base;
 }
 
 // curated + tourAPI 보강 병합 (중복 id 제거)
@@ -146,7 +154,103 @@ export const regions: RegionData[] = [
       { id: "daegu-att-02", name: "대구향교·공산성", type: "attraction", region: "daegu", city: "대구 중구", summary: "문화 산책, 사우나 완충", tags: ["산책","문화","사진"], priceLevel: "low", avgDurationMin: 70, highlights: ["향교","전통","골목"] },
     ], "daegu")
   },
+  {
+    id: "gyeonggi", name: "경기", blurb: "수도권 온천과 대형 찜질방, 당일치기 힐링",
+    onsenDistrict: false,
+    places: mergeRegionPlaces([
+      { id: "gyeonggi-sauna-01", name: "수원 인계 사우나", type: "sauna", region: "gyeonggi", city: "경기 수원시", summary: "절다운 동네 사우나, 가성비", tags: ["가성비","동네","혼자"], priceLevel: "low", avgDurationMin: 120, openHours: "24시간", highlights: ["저렴","한증막","조용"] },
+      { id: "gyeonggi-sauna-02", name: "용인 리조트 온천", type: "spa", region: "gyeonggi", city: "경기 용인시", summary: "에버랜드 근처 노천온천, 가족 친화", tags: ["야외온천","가족","프리미엄"], priceLevel: "high", avgDurationMin: 200, openHours: "08:00-22:00", highlights: ["노천탕","워터파크","키즈존"] },
+      { id: "gyeonggi-sauna-03", name: "성남 분당 사우나", type: "sauna", region: "gyeonggi", city: "경기 성남시", summary: "신도시 동네 사우나, 조용", tags: ["조용한","혼자"], priceLevel: "low", avgDurationMin: 130, openHours: "24시간", highlights: ["저렴","수면실"] },
+      { id: "gyeonggi-lodging-01", name: "화성 오토캠핑 리조트", type: "lodging", region: "gyeonggi", city: "경기 화성시", summary: "온천 보유 펜션, 사우나 패키지", tags: ["온천","가족","프리미엄"], priceLevel: "high", avgDurationMin: 600, hasOnsen: true, highlights: ["개별 온천","바베큐","주차"] },
+      { id: "gyeonggi-food-01", name: "수원 팔달문 야리", type: "restaurant", region: "gyeonggi", city: "경기 수원시", summary: "사우나 후 든든한 야리", tags: ["저녁","가성비"], priceLevel: "low", avgDurationMin: 70, highlights: ["갈비","막국수","시장"] },
+      { id: "gyeonggi-att-01", name: "수원 화성행궁", type: "attraction", region: "gyeonggi", city: "경기 수원시", summary: "온천 전후 산책 코스", tags: ["산책","문화","사진"], priceLevel: "low", avgDurationMin: 100, highlights: ["행궁","요새","야경"] },
+    ], "gyeonggi")
+  },
+  {
+    id: "chungbuk", name: "충북", blurb: "청주·충주 온천과 산골 한정식 힐링",
+    onsenDistrict: false,
+    places: mergeRegionPlaces([
+      { id: "chungbuk-sauna-01", name: "청주 사우나", type: "sauna", region: "chungbuk", city: "충북 청주시", summary: "도심 동네 사우나, 가성비", tags: ["가성비","동네","혼자"], priceLevel: "low", avgDurationMin: 120, openHours: "24시간", highlights: ["저렴","한증막"] },
+      { id: "chungbuk-sauna-02", name: "충주 온천 리조트", type: "spa", region: "chungbuk", city: "충북 충주시", summary: "호수 근처 노천온천", tags: ["야외온천","프리미엄"], priceLevel: "mid", avgDurationMin: 180, highlights: ["노천탕","호수뷰"] },
+      { id: "chungbuk-food-01", name: "청주 막국수 거리", type: "restaurant", region: "chungbuk", city: "충북 청주시", summary: "사우나 후 막국수", tags: ["저녁","가성비"], priceLevel: "low", avgDurationMin: 50, highlights: ["막국수","순대국"] },
+      { id: "chungbuk-att-01", name: "청남대", type: "attraction", region: "chungbuk", city: "충북 청주시", summary: "온천 전후 산책", tags: ["산책","자연","조용한"], priceLevel: "low", avgDurationMin: 90, highlights: ["대통령별장","호수","잔디"] },
+    ], "chungbuk")
+  },
+  {
+    id: "chungnam", name: "충남", blurb: "아산 온양온천·보령 머드축제로 유명한 온천 지방",
+    onsenDistrict: true,
+    places: mergeRegionPlaces([
+      { id: "chungnam-sauna-01", name: "아산 온양온천 사우나", type: "spa", region: "chungnam", city: "충남 아산시", summary: "유서 깊은 온천 본고장", tags: ["온천","조용한","가성비"], priceLevel: "mid", avgDurationMin: 180, openHours: "06:00-22:00", highlights: ["전통 온천","저렴","역사"] },
+      { id: "chungnam-sauna-02", name: "천안 사우나", type: "sauna", region: "chungnam", city: "충남 천안시", summary: "터미널 근처 동네 사우나", tags: ["가성비","혼자"], priceLevel: "low", avgDurationMin: 120, openHours: "24시간", highlights: ["교통편리","저렴"] },
+      { id: "chungnam-sauna-03", name: "보령 머드온천", type: "spa", region: "chungnam", city: "충남 보령시", summary: "바다 근처 온천, 프리미엄", tags: ["야외온천","바다","프리미엄"], priceLevel: "high", avgDurationMin: 160, highlights: ["노천탕","바다뷰"] },
+      { id: "chungnam-food-01", name: "아산 온양맛집(민물장어)", type: "restaurant", region: "chungnam", city: "충남 아산시", summary: "온천 후 보양식", tags: ["보양","유명맛집"], priceLevel: "mid", avgDurationMin: 80, highlights: ["장어구이","전통"] },
+      { id: "chungnam-att-01", name: "독립기념관", type: "attraction", region: "chungnam", city: "충남 천안시", summary: "온천 전후 사적", tags: ["산책","문화"], priceLevel: "low", avgDurationMin: 90, highlights: ["사적","자연"] },
+    ], "chungnam")
+  },
+  {
+    id: "jeonbuk", name: "전북", blurb: "전주 한옥마을·군산 근대 거리와 온천",
+    onsenDistrict: false,
+    places: mergeRegionPlaces([
+      { id: "jeonbuk-sauna-01", name: "전주 한옥 온천 사우나", type: "spa", region: "jeonbuk", city: "전북 전주시", summary: "한옥마을 근처 노천온천", tags: ["야외온천","한옥","조용한"], priceLevel: "mid", avgDurationMin: 170, highlights: ["노천탕","한적"] },
+      { id: "jeonbuk-sauna-02", name: "군산 사우나", type: "sauna", region: "jeonbuk", city: "전북 군산시", summary: "근대 거리 동네 사우나, 가성비", tags: ["가성비","동네"], priceLevel: "low", avgDurationMin: 120, openHours: "24시간", highlights: ["저렴","한증막"] },
+      { id: "jeonbuk-food-01", name: "전주 한정식(교동 마을)", type: "restaurant", region: "jeonbuk", city: "전북 전주시", summary: "사우나 전 한정식", tags: ["점심","프리미엄","가족"], priceLevel: "mid", avgDurationMin: 90, highlights: ["한정식","한옥","전통"] },
+      { id: "jeonbuk-food-02", name: "군산 낙지·간장게장", type: "restaurant", region: "jeonbuk", city: "전북 군산시", summary: "바다 근처 보양식", tags: ["회","야간","프리미엄"], priceLevel: "high", avgDurationMin: 90, highlights: ["낙지","게장","바다뷰"] },
+      { id: "jeonbuk-att-01", name: "전주 한옥마을", type: "attraction", region: "jeonbuk", city: "전북 전주시", summary: "온천 전후 골목 산책", tags: ["산책","사진","가족"], priceLevel: "low", avgDurationMin: 90, highlights: ["한옥","골목","카페"] },
+    ], "jeonbuk")
+  },
+  {
+    id: "jeonnam", name: "전남", blurb: "여수·순천 바다와 농경지 온천",
+    onsenDistrict: false,
+    places: mergeRegionPlaces([
+      { id: "jeonnam-sauna-01", name: "여수 오동도 온천 사우나", type: "spa", region: "jeonnam", city: "전남 여수시", summary: "바다 뷰 노천온천", tags: ["야외온천","바다","프리미엄"], priceLevel: "high", avgDurationMin: 170, highlights: ["노천탕","바다뷰","마사지"] },
+      { id: "jeonnam-sauna-02", name: "순천 사우나", type: "sauna", region: "jeonnam", city: "전남 순천시", summary: "호수 공원 근처 동네 사우나", tags: ["가성비","조용한"], priceLevel: "low", avgDurationMin: 120, openHours: "24시간", highlights: ["저렴","한증막"] },
+      { id: "jeonnam-food-01", name: "여수 회·돌산갓김치", type: "restaurant", region: "jeonnam", city: "전남 여수시", summary: "바다 근처 신선 해산물", tags: ["회","야간","프리미엄"], priceLevel: "high", avgDurationMin: 90, highlights: ["활어회","갓김치","바다뷰"] },
+      { id: "jeonnam-att-01", name: "순천만 정원", type: "attraction", region: "jeonnam", city: "전남 순천시", summary: "온천 전후 습지 산책", tags: ["산책","자연","사진"], priceLevel: "low", avgDurationMin: 120, highlights: ["갈대","습지","야경"] },
+    ], "jeonnam")
+  },
+  {
+    id: "gyeongbuk", name: "경북", blurb: "경주·안동 온천과 한옥 스파",
+    onsenDistrict: true,
+    places: mergeRegionPlaces([
+      { id: "gyeongbuk-sauna-01", name: "안동 하회 온천 사우나", type: "spa", region: "gyeongbuk", city: "경북 안동시", summary: "하회마을 근처 노천온천", tags: ["야외온천","한옥","조용한"], priceLevel: "mid", avgDurationMin: 170, highlights: ["노천탕","한적","전통"] },
+      { id: "gyeongbuk-sauna-02", name: "포항 사우나", type: "sauna", region: "gyeongbuk", city: "경북 포항시", summary: "바다 근처 동네 사우나, 가성비", tags: ["가성비","동네"], priceLevel: "low", avgDurationMin: 120, openHours: "24시간", highlights: ["저렴","한증막"] },
+      { id: "gyeongbuk-sauna-03", name: "경주 보문 온천 리조트", type: "jjimjilbang", region: "gyeongbuk", city: "경북 경주시", summary: "호수 리조트 찜질방, 가족 친화", tags: ["가족","호수","프리미엄"], priceLevel: "high", avgDurationMin: 220, openHours: "24시간", highlights: ["호수뷰","키즈존","수영장"] },
+      { id: "gyeongbuk-food-01", name: "안동 간고등어·찜닭", type: "restaurant", region: "gyeongbuk", city: "경북 안동시", summary: "사우나 후 보양식", tags: ["보양","유명맛집"], priceLevel: "mid", avgDurationMin: 80, highlights: ["간고등어","찜닭","전통"] },
+      { id: "gyeongbuk-att-01", name: "경주 불국사", type: "attraction", region: "gyeongbuk", city: "경북 경주시", summary: "온천 전후 사찰 탐방", tags: ["사찰","자연","조용한"], priceLevel: "low", avgDurationMin: 120, highlights: ["석탑","산사","세계유산"] },
+    ], "gyeongbuk")
+  },
+  {
+    id: "gyeongnam", name: "경남", blurb: "창원·거제 바다 온천과 한방 사우나",
+    onsenDistrict: false,
+    places: mergeRegionPlaces([
+      { id: "gyeongnam-sauna-01", name: "창원 사우나", type: "sauna", region: "gyeongnam", city: "경남 창원시", summary: "도심 동네 사우나, 가성비", tags: ["가성비","동네","혼자"], priceLevel: "low", avgDurationMin: 120, openHours: "24시간", highlights: ["저렴","한증막","조용"] },
+      { id: "gyeongnam-sauna-02", name: "거제 바다 온천", type: "spa", region: "gyeongnam", city: "경남 거제시", summary: "바다 뷰 노천온천, 프리미엄", tags: ["야외온천","바다","프리미엄"], priceLevel: "high", avgDurationMin: 180, highlights: ["노천탕","바다뷰","마사지"] },
+      { id: "gyeongnam-sauna-03", name: "김해 한방 사우나", type: "sauna", region: "gyeongnam", city: "경남 김해시", summary: "한방 찜질, 건강 중심", tags: ["한방","조용한","혼자"], priceLevel: "mid", avgDurationMin: 150, highlights: ["한방탕","족욕","조용"] },
+      { id: "gyeongnam-food-01", name: "통영 충무김밥·굴", type: "restaurant", region: "gyeongnam", city: "경남 통영시", summary: "바다 근처 신선 해산물", tags: ["회","야간","가성비"], priceLevel: "mid", avgDurationMin: 80, highlights: ["굴","김밥","바다뷰"] },
+      { id: "gyeongnam-att-01", name: "거제 해금강", type: "attraction", region: "gyeongnam", city: "경남 거제시", summary: "온천 전후 바다 산책", tags: ["산책","바다","사진"], priceLevel: "low", avgDurationMin: 120, highlights: ["바위섬","유람선","야경"] },
+    ], "gyeongnam")
+  },
+  {
+    id: "ulsan", name: "울산", blurb: "산업 도시의 숨은 온천과 바다 사우나",
+    onsenDistrict: false,
+    places: mergeRegionPlaces([
+      { id: "ulsan-sauna-01", name: "울산 시내 사우나", type: "sauna", region: "ulsan", city: "울산 남구", summary: "도심 동네 사우나, 가성비", tags: ["가성비","동네","혼자"], priceLevel: "low", avgDurationMin: 120, openHours: "24시간", highlights: ["저렴","한증막","조용"] },
+      { id: "ulsan-sauna-02", name: "울주 온천 리조트", type: "spa", region: "ulsan", city: "울산 울주군", summary: "산속 노천온천, 프리미엄", tags: ["야외온천","자연","프리미엄"], priceLevel: "high", avgDurationMin: 190, highlights: ["노천탕","산자락","마사지"] },
+      { id: "ulsan-food-01", name: "울산 고기거리", type: "restaurant", region: "ulsan", city: "울산 남구", summary: "사우나 후 든든한 고기", tags: ["저녁","가족"], priceLevel: "mid", avgDurationMin: 90, highlights: ["소고기","골목","분위기"] },
+      { id: "ulsan-att-01", name: "태화강 대숲", type: "attraction", region: "ulsan", city: "울산 중구", summary: "온천 전후 강 산책", tags: ["산책","자연","조용한"], priceLevel: "low", avgDurationMin: 80, highlights: ["억새","강뷰","야경"] },
+    ], "ulsan")
+  },
+  {
+    id: "sejong", name: "세종", blurb: "계획 도시의 조용한 사우나와 호수 산책",
+    onsenDistrict: false,
+    places: mergeRegionPlaces([
+      { id: "sejong-sauna-01", name: "세종 사우나", type: "sauna", region: "sejong", city: "세종 세종시", summary: "행정도시 동네 사우나, 가성비", tags: ["가성비","조용한","혼자"], priceLevel: "low", avgDurationMin: 120, openHours: "24시간", highlights: ["저렴","한증막","조용"] },
+      { id: "sejong-food-01", name: "세종 호수공원 맛집", type: "restaurant", region: "sejong", city: "세종 세종시", summary: "사우나 후 가볍게", tags: ["점심","가성비"], priceLevel: "low", avgDurationMin: 60, highlights: ["카페","파스타","호수뷰"] },
+      { id: "sejong-att-01", name: "세종 호수공원", type: "attraction", region: "sejong", city: "세종 세종시", summary: "온천 전후 산책 코스", tags: ["산책","자연","가족"], priceLevel: "low", avgDurationMin: 70, highlights: ["호수","분수","잔디"] },
+    ], "sejong")
+  },
 ];
+
 
 export function getRegion(id: string): RegionData | undefined {
   return regions.find((r) => r.id === id);

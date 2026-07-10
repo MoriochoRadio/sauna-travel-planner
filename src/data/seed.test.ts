@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 import { regions, getRegion } from "./seed";
 
 describe("seed (curated + tourAPI enriched 병합)", () => {
-  test("지역 9곳이 존재한다", () => {
-    expect(regions).toHaveLength(9);
+  test("지역 18곳이 존재한다 (17시도 + 경주)", () => {
+    expect(regions).toHaveLength(18);
   });
 
   test("각 지역은 사우나/온천(curated)을 최소 1개 이상 가진다", () => {

@@ -4,23 +4,14 @@ import { useState, useEffect } from "react";
 import type { PlannerInput, Preference, Place } from "@/data/schema";
 import { getRegion } from "@/data/seed";
 import { getSigungus, type Sigungu } from "@/data/sigungu";
+import { ALL_REGIONS, REGION_LABELS } from "@/data/schema";
 import { CourseView } from "./CourseView";
 import { CourseSkeleton } from "./CourseSkeleton";
 import { SaunaMap } from "./SaunaMap";
 import { RegionMapPicker } from "./RegionMapPicker";
 import type { Course } from "./types";
 
-const REGIONS = [
-  { id: "seoul", name: "서울" },
-  { id: "busan", name: "부산" },
-  { id: "gangwon", name: "강원" },
-  { id: "gyeongju", name: "경주" },
-  { id: "jeju", name: "제주" },
-  { id: "incheon", name: "인천" },
-  { id: "daejeon", name: "대전" },
-  { id: "gwangju", name: "광주" },
-  { id: "daegu", name: "대구" },
-];
+const REGIONS = ALL_REGIONS.map((id) => ({ id, name: REGION_LABELS[id] }));
 
 const PREFS: { id: Preference; label: string }[] = [
   { id: "quiet", label: "조용한" },

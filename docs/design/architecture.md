@@ -37,9 +37,14 @@
 ```
 src/
 ├── data/
-│   ├── schema.ts        # Zod: Place/Region/PlannerInput (이미 존재)
-│   ├── seed.sample.ts   # Phase0 샘플 (이미 존재)
-│   └── seed.ts          # [구현] 전체 RegionData[]
+│   ├── schema.ts        # Zod: Place/Region/PlannerInput
+│   ├── seed.ts          # 전체 RegionData[] (17시도+경주 curated + 숙소)
+│   ├── seed.enriched.ts # tourAPI 자동 보강 데이터
+│   ├── sigungu.ts       # 시군구 좌표 (230개, generated 기반)
+│   ├── sigungu.generated.ts # 자동 생성 시군구
+│   ├── regions-ko.ts    # 전국 시군구명
+│   ├── rating.ts        # 추천지수 산출
+│   └── share.ts         # 공유 URL 인코딩/디코딩
 ├── ai/
 │   ├── course.schema.ts # [설계/구현] Course/Day/Stop Zod
 │   ├── prompt.ts        # [설계/구현] 시스템+유저 프롬프트 템플릿

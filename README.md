@@ -71,13 +71,23 @@ npm run test:e2e   # Playwright E2E (10개 시나리오)
 
 ```
 src/
-├── data/         # 스키마(schema), 시드(seed), 시군구(sigungu), 추천지수(rating)
-├── ai/           # 코스 스키마·프롬프트·LLM 호출·폴백·엔진 오케스트레이션
-├── lib/          # 카카오/kakao, tourAPI 연동
-├── app/          # 페이지 + API 라우트 (/api/course, /api/places)
-└── components/   # 입력 폼(PlannerForm)·결과 뷰(CourseView)·지도 피커
-scripts/          # build-sigungu.mjs (전국 시군구 좌표 수집)
+├── data/         # schema(Zod), seed(18곳 curated+숙소), seed.enriched(tourAPI 보강)
+│                 # sigungu(230 시군구), regions-ko(전국 시군구명), rating(추천지수), share(URL)
+├── ai/           # course.schema·prompt·generate(LLM)·fallback·engine(오케스트레이션)
+├── lib/          # kakao(로컬 검색), tourapi(폴백), rating
+├── app/          # page + API 라우트 (/api/course, /api/places, /api/rate-limit, /api/stats)
+└── components/   # PlannerForm·CourseView·RegionMapPicker·SaunaMap·CourseSkeleton·ErrorBoundary
+scripts/          # sync-tourapi.mjs(주간 동기화), build-sigungu.mjs(시군구 수집)
+docs/             # PRD·IA·analysis/*·design/*·deployment·review (SDLC 산출물)
+.github/workflows/# ci(타입/테스트/e2e), sync-tourapi, verify-kakao
 ```
+
+## 📚 문서 (docs/)
+
+- `PRD.md`, `IA.md` — 기획
+- `analysis/*` — 요구사항·데이터소스·도메인모델·타당성/리스크
+- `design/*` — 아키텍처·데이터모델·API·프롬프트·와이어프레임·**ui-design**(디자인 시스템)
+- `deployment.md`, `review.md` — 배포 가이드·전면 검토
 
 ## 🔑 핵심 설계 결정
 

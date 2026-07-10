@@ -39,6 +39,9 @@ test-results/
 playwright-report/
 blob-report/
 
+# hermes 내부 메타 (플랜/작업 메모 — 레포 산출물 아님)
+.hermes/
+
 # temp scripts
 scripts/*.run
 scripts/*_run.mjs

@@ -1,9 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "사우나 여행 코스 메이커",
   description: "한국 사우나·찜질방·온천을 축으로 맛집과 볼거리, 숙소를 엮은 맞춤 여행 코스 생성기",
+};
+
+export const viewport: Viewport = {
   themeColor: "#E8743B",
 };
 

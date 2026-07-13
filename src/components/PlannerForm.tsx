@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { PlannerInput, Preference, Place } from "@/data/schema";
 import { getRegion } from "@/data/seed";
 import { getSigungus, type Sigungu } from "@/data/sigungu";
@@ -36,12 +36,23 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
   const [note, setNote] = useState(initialInput?.note ?? "");
   const [anchorSaunaId, setAnchorSaunaId] = useState<string | undefined>(initialInput?.anchorSaunaId);
   const [step, setStep] = useState<Step>(1);
+  const [maxStepReached, setMaxStepReached] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [course, setCourse] = useState<Course | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [livePreview, setLivePreview] = useState<any[]>([]);
+  const [livePreviewLoading, setLivePreviewLoading] = useState(false);
+  const livePreviewSeq = useRef(0);
 
   const regionData = getRegion(region);
   const anchorSauna = regionData?.places.find((p) => p.id === anchorSaunaId);
+  const sigunguLabel = sigungu ? getSigungus(region).find((s) => s.id === sigungu)?.fullName : undefined;
+
+  // 데스크탑 스텝 이동(요약 패널/스테퍼에서 사용) — 도달했던 단계까지만 건너뛸 수 있게 함
+  const goToStep = (s: Step) => {
+    setStep(s);
+    setMaxStepReached((prev) => (prev > s ? prev : s));
+  };
 
   const togglePref = (p: Preference) =>
     setPrefs((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
@@ -101,24 +112,34 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
     }
     setSigungu(s.id);
     // 실시간 사우나 미리보기 (키 없으면 무시)
+    const seq = ++livePreviewSeq.current;
+    setLivePreviewLoading(true);
+    setLivePreview([]);
     fetch(`/api/places?region=${s.region}&sigungu=${s.id}`)
       .then((r) => r.json())
-      .then((j) => setLivePreview(j.places ?? []))
-      .catch(() => setLivePreview([]));
+      .then((j) => {
+        if (seq !== livePreviewSeq.current) return; // 이후 선택으로 이미 무효화된 응답
+        setLivePreview(j.places ?? []);
+      })
+      .catch(() => {
+        if (seq !== livePreviewSeq.current) return;
+        setLivePreview([]);
+      })
+      .finally(() => {
+        if (seq === livePreviewSeq.current) setLivePreviewLoading(false);
+      });
   };
-
-  const [livePreview, setLivePreview] = useState<any[]>([]);
 
   if (course) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 lg:max-w-2xl lg:mx-auto">
         <CourseView course={course} onRetry={submit} loading={loading} />
         <button
           type="button"
           className="btn-secondary w-full"
           onClick={() => {
             setCourse(null);
-            setStep(2);
+            goToStep(2);
           }}
         >
           ↺ 다른 사우나로 다시 짜기
@@ -139,15 +160,28 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
   }
 
   return (
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8 lg:items-start">
     <div className="space-y-6">
-      {/* Stepper */}
+      {/* Stepper — 이미 지났던 단계는 클릭해서 바로 이동 가능 */}
       <ol className="flex items-center gap-2 text-sm">
-        {[1, 2, 3].map((s) => (
-          <li key={s} className={`flex items-center gap-2 ${step === s ? "font-bold text-onsen" : "text-gray-400"}`}>
-            <span className={`w-6 h-6 rounded-full grid place-items-center text-xs ${step === s ? "bg-onsen text-white" : "bg-gray-200"}`}>{s}</span>
-            {s === 1 ? "지역" : s === 2 ? "사우나 고르기" : "부가 옵션"}
-          </li>
-        ))}
+        {[1, 2, 3].map((s) => {
+          const reachable = s <= maxStepReached;
+          return (
+            <li key={s}>
+              <button
+                type="button"
+                disabled={!reachable}
+                onClick={() => goToStep(s as Step)}
+                className={`flex items-center gap-2 transition-colors ${
+                  step === s ? "font-bold text-onsen" : reachable ? "text-bark-soft hover:text-onsen cursor-pointer" : "text-bark-soft/40 cursor-not-allowed"
+                }`}
+              >
+                <span className={`w-6 h-6 rounded-full grid place-items-center text-xs ${step === s ? "bg-onsen text-white" : "bg-cream-2"}`}>{s}</span>
+                {s === 1 ? "지역" : s === 2 ? "사우나 고르기" : "부가 옵션"}
+              </button>
+            </li>
+          );
+        })}
       </ol>
 
       {step === 1 && (
@@ -211,7 +245,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
 
             {mapMode === "dropdown" && (
               <div className="mt-3">
-                <p className="text-xs text-gray-400 mb-2">또는 지역 지도에서 클릭:</p>
+                <p className="text-xs text-bark-soft mb-2">또는 지역 지도에서 클릭:</p>
                 <RegionMapPicker region={region} selectedId={sigungu} onSelect={onSigunguSelect} />
               </div>
             )}
@@ -221,10 +255,12 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
                 <p className="text-xs font-semibold text-onsen mb-2">
                   {getSigungus(region).find((s) => s.id === sigungu)?.fullName ?? "선택된 세부 지역"} 실시간 사우나
                 </p>
-                {livePreview.length === 0 ? (
-                  <p className="text-xs text-gray-400">불러오는 중… (또는 tourAPI 키 미설정 시 curated 데이터로 코스 생성)</p>
+                {livePreviewLoading ? (
+                  <p className="text-xs text-bark-soft">불러오는 중…</p>
+                ) : livePreview.length === 0 ? (
+                  <p className="text-xs text-bark-soft">실시간 데이터가 없어요 (curated 데이터로 코스를 만들어요).</p>
                 ) : (
-                  <ul className="text-xs text-gray-600 space-y-1 max-h-32 overflow-auto">
+                  <ul className="text-xs text-bark-soft space-y-1 max-h-32 overflow-auto">
                     {livePreview.slice(0, 8).map((p) => (
                       <li key={p.id}>• {p.name}{p.address ? ` — ${p.address}` : ""}</li>
                     ))}
@@ -258,7 +294,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
               <p className="text-xs text-onsen mt-2">이 지역은 온천 지구예요 — 온천 중심 모드를 추천해요.</p>
             )}
           </div>
-          <button className="btn-primary w-full" onClick={() => setStep(2)}>
+          <button className="btn-primary w-full" onClick={() => goToStep(2)}>
             다음: 사우나 고르기 →
           </button>
         </section>
@@ -274,7 +310,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
               </span>
             )}
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-bark-soft">
             가고 싶은 사우나·온천을 골라보세요. 골라두면 코스의 중심이 돼요. (건너뛰고 추천받을 수도 있어요)
           </p>
           <SaunaMap
@@ -283,8 +319,8 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
             onSelect={(p: Place) => setAnchorSaunaId(p.id)}
           />
           <div className="flex gap-2">
-            <button className="btn-secondary flex-1" onClick={() => setStep(1)}>← 이전</button>
-            <button className="btn-primary flex-1" onClick={() => setStep(3)}>
+            <button className="btn-secondary flex-1" onClick={() => goToStep(1)}>← 이전</button>
+            <button className="btn-primary flex-1" onClick={() => goToStep(3)}>
               {anchorSauna ? "선택한 사우나로 →" : "추천 받기 →"}
             </button>
           </div>
@@ -352,7 +388,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
             />
           </div>
           <div className="flex gap-2">
-            <button className="btn-secondary flex-1" onClick={() => setStep(2)}>← 이전</button>
+            <button className="btn-secondary flex-1" onClick={() => goToStep(2)}>← 이전</button>
             <button className="btn-primary flex-1" onClick={submit} disabled={loading}>
               {loading ? "AI가 코스를 짜고 있어요…" : "코스 만들기"}
             </button>
@@ -369,6 +405,49 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
         </div>
       )}
       {loading && <CourseSkeleton />}
+    </div>
+
+    {/* 데스크탑 전용 — 지금까지 고른 내용을 스크롤 없이 항상 확인할 수 있는 요약 패널 */}
+    <aside className="hidden lg:block sticky top-8">
+      <div className="card glass p-5 space-y-4">
+        <h2 className="text-xs font-bold text-bark-soft tracking-wide">🧖 선택 요약</h2>
+        <dl className="space-y-3 text-sm">
+          <div>
+            <dt className="text-xs text-bark-soft mb-0.5">지역</dt>
+            <dd className="font-medium text-bark">
+              {REGION_LABELS[region]}{sigunguLabel ? ` · ${sigunguLabel}` : ""}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-bark-soft mb-0.5">사우나</dt>
+            <dd className="font-medium text-bark">{anchorSauna ? anchorSauna.name : "미선택 (AI 추천)"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-bark-soft mb-0.5">여행 모드</dt>
+            <dd className="font-medium text-bark">{onsenFocus ? "♨ 온천 중심" : "🛁 일반"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-bark-soft mb-0.5">기간</dt>
+            <dd className="font-medium text-bark">{days}일</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-bark-soft mb-0.5">취향</dt>
+            <dd className="font-medium text-bark">
+              {prefs.length ? prefs.map((p) => PREFS.find((x) => x.id === p)?.label).join(", ") : "미선택"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-bark-soft mb-0.5">숙소 추천</dt>
+            <dd className="font-medium text-bark">{includeLodging ? "포함" : "미포함"}</dd>
+          </div>
+        </dl>
+        {maxStepReached > step && (
+          <button type="button" onClick={() => goToStep((step + 1) as Step)} className="btn-ghost text-xs w-full justify-center border border-onsen/20">
+            다음 단계로 이동 →
+          </button>
+        )}
+      </div>
+    </aside>
     </div>
   );
 }

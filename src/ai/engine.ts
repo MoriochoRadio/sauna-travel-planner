@@ -8,6 +8,15 @@ import { CourseSchema, type CourseResult } from "./course.schema";
 import { generateWithLLM } from "./generate";
 import { fallbackCourse } from "./fallback";
 
+// 카카오/tourAPI 실시간 결과와 curated seed에 같은 장소가 다른 id로 중복 등록되는 것을 방지
+function normalizeName(name: string): string {
+  return name.replace(/\s+/g, "").toLowerCase();
+}
+function dedupeByName(primary: Place[], secondary: Place[]): Place[] {
+  const seenNames = new Set(primary.map((p) => normalizeName(p.name)));
+  return secondary.filter((p) => !seenNames.has(normalizeName(p.name)));
+}
+
 // 엔진 오케스트레이션: LLM 우선, 실패 시 폴백
 export async function generateCourse(input: PlannerInput): Promise<CourseResult> {
   const region = getRegion(input.region);
@@ -53,7 +62,9 @@ export async function generateCourse(input: PlannerInput): Promise<CourseResult>
       if (live.length > 0) {
         // 추천지수 계산
         live = live.map((p) => ({ ...p, rating: computeRating(p) }));
-        regionData = { ...region, places: [...live, ...region.places] };
+        // curated seed 중 실시간 결과와 이름이 같은 장소는 제외(중복 방지, 실시간 데이터 우선)
+        const curatedRest = dedupeByName(live, region.places);
+        regionData = { ...region, places: [...live, ...curatedRest] };
       }
     }
   }

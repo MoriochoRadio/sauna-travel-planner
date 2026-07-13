@@ -26,7 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="card p-6 text-center space-y-3" role="alert">
           <p className="text-lg">😵 앗, 문제가 생겼어요</p>
-          <p className="text-sm text-gray-500">{this.state.error.message}</p>
+          <p className="text-sm text-bark-soft">{this.state.error.message}</p>
           <button
             type="button"
             onClick={this.reset}

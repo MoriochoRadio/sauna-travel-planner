@@ -59,15 +59,15 @@ export function MapEmbed({ places, selectedId }: { places: Place[]; selectedId?:
   }, [key, coords, selectedId]);
 
   if (!key) {
+    // 지도 임베드 키(NEXT_PUBLIC_KAKAO_MAP_KEY) 미등록 상태 — Vercel env에 등록하면 지도가 활성화된다.
     return (
-      <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3">
-        지도 임베드 미설정 — 장소 카드의 "지도/네이버" 링크로 위치를 확인하세요.
-        (관리자: Vercel env <code>NEXT_PUBLIC_KAKAO_MAP_KEY</code> 등록 시 지도 활성화)
+      <div className="text-xs text-bark-soft bg-cream-2 rounded-lg p-3">
+        지도 미리보기를 사용할 수 없어요 — 장소 카드의 &quot;지도/네이버&quot; 링크로 위치를 확인해주세요.
       </div>
     );
   }
   if (coords.length === 0) {
-    return <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3">표시할 좌표가 아직 없어요 (동기화 데이터에 좌표가 없음).</div>;
+    return <div className="text-xs text-bark-soft bg-cream-2 rounded-lg p-3">표시할 좌표가 아직 없어요 (동기화 데이터에 좌표가 없음).</div>;
   }
-  return <div ref={ref} className="w-full h-64 rounded-lg border border-gray-200" aria-label="사우나 지도" />;
+  return <div ref={ref} className="w-full h-64 rounded-lg border border-bark-soft/20" aria-label="사우나 지도" />;
 }

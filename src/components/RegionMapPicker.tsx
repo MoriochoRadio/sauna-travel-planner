@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { Region } from "@/data/schema";
 import { getSigungus, getAllSigungus, findSigunguById, nearestSigunguInRegion, type Sigungu } from "@/data/sigungu";
 
@@ -29,6 +29,32 @@ function loadLeaflet(): Promise<any> {
   return leafletLoading;
 }
 
+// 전국 모드는 마커가 230개+라 클러스터링 없이는 수도권 등에서 마커가 겹쳐 클릭이 불가능해진다.
+let clusterLoading: Promise<void> | null = null;
+function loadMarkerCluster(): Promise<void> {
+  if (typeof window === "undefined") return Promise.reject(new Error("no window"));
+  const w = window as any;
+  if (w.L?.markerClusterGroup) return Promise.resolve();
+  if (clusterLoading) return clusterLoading;
+  clusterLoading = new Promise((resolve, reject) => {
+    for (const href of [
+      "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css",
+      "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css",
+    ]) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = href;
+      document.head.appendChild(link);
+    }
+    const s = document.createElement("script");
+    s.src = "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js";
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("markercluster load fail"));
+    document.head.appendChild(s);
+  });
+  return clusterLoading;
+}
+
 // region 종속 모드(세부지역) 또는 전국 모드(nationwide)
 export function RegionMapPicker({
   mode = "region",
@@ -41,10 +67,16 @@ export function RegionMapPicker({
   selectedId?: string;
   onSelect: (s: Sigungu) => void;
 }) {
-  const list = mode === "nationwide" ? getAllSigungus() : region ? getSigungus(region) : [];
+  // useMemo로 참조를 안정시켜, region/mode가 그대로인데 부모가 리렌더될 때마다
+  // 지도 전체가 파괴·재생성되는 것을 방지한다(예: 특이사항 입력 중 지도가 매번 다시 그려짐).
+  const list = useMemo(
+    () => (mode === "nationwide" ? getAllSigungus() : region ? getSigungus(region) : []),
+    [mode, region]
+  );
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Record<string, any>>({});
+  const clusterRef = useRef<any>(null);
   const selected = selectedId ? findSigunguById(selectedId) : undefined;
 
   useEffect(() => {
@@ -53,6 +85,7 @@ export function RegionMapPicker({
     if (!el || list.length === 0) return;
 
     loadLeaflet()
+      .then((L) => (mode === "nationwide" ? loadMarkerCluster().catch(() => {}).then(() => L) : L))
       .then((L) => {
         if (destroyed || !ref.current) return;
         if (mapRef.current) {
@@ -76,19 +109,28 @@ export function RegionMapPicker({
             iconAnchor: selected ? [13, 13] : [10, 10],
           });
 
+        // 전국 모드(마커 230개+)는 클러스터 그룹에 담아 겹침을 방지, region 모드는 소수라 바로 지도에 추가
+        const useCluster = mode === "nationwide" && typeof L.markerClusterGroup === "function";
+        const cluster = useCluster ? L.markerClusterGroup({ maxClusterRadius: 60 }) : null;
+        clusterRef.current = cluster;
+
         const drawMarkers = (selId?: string) => {
           for (const k in markersRef.current) map.removeLayer(markersRef.current[k]);
           markersRef.current = {};
+          if (cluster) cluster.clearLayers();
           for (const s of list) {
             const isSel = s.id === selId;
             const marker = L.marker([s.lat, s.lng], {
               title: s.fullName,
               icon: makePin(isSel),
-            }).addTo(map);
+            });
             marker.bindTooltip(s.fullName, { direction: "top" });
             marker.on("click", () => onSelect(s));
             markersRef.current[s.id] = marker;
+            if (cluster) cluster.addLayer(marker);
+            else marker.addTo(map);
           }
+          if (cluster && !map.hasLayer(cluster)) cluster.addTo(map);
         };
         drawMarkers(selectedId);
 
@@ -113,12 +155,13 @@ export function RegionMapPicker({
       mapRef.current.remove();
       mapRef.current = null;
     }
+    clusterRef.current = null;
     };
     }, [mode, region, list, selectedId, selected, onSelect]);
 
   if (list.length === 0) {
     return (
-      <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3">
+      <div className="text-xs text-bark-soft bg-cream-2 rounded-lg p-3">
         이 지역은 시군구 선택을 지원하지 않아요.
       </div>
     );
@@ -126,7 +169,7 @@ export function RegionMapPicker({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-bark-soft">
         {mode === "nationwide"
           ? "전국 지도를 자유롭게 움직여 아무 동네나 클릭하거나, 마커를 눌러 세부 지역을 선택하세요."
           : "지도에서 동네를 직접 클릭하거나 마커를 눌러 세부 지역을 선택하세요."}

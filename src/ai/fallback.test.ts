@@ -58,3 +58,35 @@ describe("fallbackCourse — 새 기능 (사우나 먼저 고르기 / 온천중�
     expect(course.days[0].stops.length).toBeGreaterThan(0);
   });
 });
+
+describe("fallbackCourse — 중복 배치 방지", () => {
+  it("같은 날 안에서 같은 장소가 두 번 배치되지 않는다", () => {
+    const region = getRegion("busan")!;
+    const course = fallbackCourse({ ...base, region: "busan", days: 2 }, region);
+    for (const day of course.days) {
+      const ids = day.stops.map((s) => s.placeId).filter(Boolean);
+      expect(new Set(ids).size).toBe(ids.length);
+    }
+  });
+
+  it("재고가 충분하면 여러 날에 걸쳐 같은 맛집이 반복되지 않는다", () => {
+    const region = getRegion("busan")!;
+    const restaurantCount = region.places.filter((p) => p.type === "restaurant").length;
+    expect(restaurantCount).toBeGreaterThanOrEqual(4); // 이 지역은 재고가 충분하다는 전제
+    const course = fallbackCourse({ ...base, region: "busan", days: 2 }, region);
+    const mealIds = course.days.flatMap((d) =>
+      d.stops.filter((s) => s.time === "13:00" || s.time === "18:00").map((s) => s.placeId)
+    );
+    expect(new Set(mealIds).size).toBe(mealIds.length);
+  });
+
+  it("15:00 stop 문구에 번역되지 않은 영어 단어가 남아있지 않다", () => {
+    const region = getRegion("busan")!;
+    const course = fallbackCourse({ ...base, region: "busan", days: 2, anchorSaunaId: undefined }, region);
+    for (const day of course.days) {
+      for (const stop of day.stops) {
+        expect(stop.reason).not.toMatch(/another/i);
+      }
+    }
+  });
+});

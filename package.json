@@ -1,6 +1,6 @@
 {
   "name": "sauna-travel-planner",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "한국 사우나·찜질방·온천 중심 인터랙티브 추천 여행 코스 생성 웹앱 (Next.js + 카카오 로컬 API + AI)",
   "keywords": [

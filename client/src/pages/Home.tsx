@@ -1,14 +1,15 @@
 import PlaceCard from "@/components/PlaceCard";
 import RecommendationStudio from "@/components/RecommendationStudio";
-import TravelMap from "@/components/TravelMap";
 import { Button } from "@/components/ui/button";
 import { startLogin } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { ArrowDown, ArrowRight, Bookmark, ChevronRight, Compass, MapPinned, Search, SlidersHorizontal, Sparkles, Waves } from "lucide-react";
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { getPlace, type TravelPlace } from "@shared/travelCatalog";
+
+const TravelMap = lazy(() => import("@/components/TravelMap"));
 
 const categoryCopy = [
   { key: "도시의 여백", description: "복잡한 일정 사이, 가장 가까운 곳에서 잠깐의 회복을 찾습니다.", gradient: "from-[#d9b39c] via-[#f3e4d5] to-[#e6ede7]" },
@@ -83,13 +84,15 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl px-5 py-12 lg:px-8 lg:py-16"><RecommendationStudio onCourse={course => setCoursePlaceIds(Array.from(new Set(course.stops.map(stop => stop.placeId))))} /></section>
 
-      <section id="map" className="scroll-mt-20 bg-[#eee6db] py-12 lg:py-16"><div className="mx-auto max-w-7xl px-5 lg:px-8"><div className="mb-7 flex flex-col justify-between gap-4 lg:flex-row lg:items-end"><div><p className="text-xs font-bold tracking-[0.17em] text-[#aa6442]">PLACE & PATH</p><h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">{coursePlaceIds.length ? "AI 코스의 온기 지도" : "한눈에 보는 온기 지도"}</h2></div><p className="max-w-sm text-sm leading-6 text-[#74675b]">{coursePlaceIds.length ? "AI가 제안한 장소 순서가 핀과 점선 동선으로 표시됩니다." : "마음에 든 장소를 저장하면, 나만의 여행 플랜에서 동선을 이어 볼 수 있습니다."}</p></div><div className="overflow-hidden rounded-[1.75rem] border border-[#ded1c1] bg-white p-2 shadow-[0_18px_40px_-30px_rgba(58,38,20,0.4)]"><TravelMap places={mapPlaces} className="h-[320px] overflow-hidden rounded-[1.3rem] sm:h-[420px]" /></div></div></section>
+      <section id="map" className="scroll-mt-20 bg-[#eee6db] py-12 lg:py-16"><div className="mx-auto max-w-7xl px-5 lg:px-8"><div className="mb-7 flex flex-col justify-between gap-4 lg:flex-row lg:items-end"><div><p className="text-xs font-bold tracking-[0.17em] text-[#aa6442]">PLACE & PATH</p><h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">{coursePlaceIds.length ? "AI 코스의 온기 지도" : "한눈에 보는 온기 지도"}</h2></div><p className="max-w-sm text-sm leading-6 text-[#74675b]">{coursePlaceIds.length ? "AI가 제안한 장소 순서가 핀과 점선 동선으로 표시됩니다." : "마음에 든 장소를 저장하면, 나만의 여행 플랜에서 동선을 이어 볼 수 있습니다."}</p></div><div className="overflow-hidden rounded-[1.75rem] border border-[#ded1c1] bg-white p-2 shadow-[0_18px_40px_-30px_rgba(58,38,20,0.4)]"><Suspense fallback={<MapLoading className="h-[320px] sm:h-[420px]" />}><TravelMap places={mapPlaces} className="h-[320px] overflow-hidden rounded-[1.3rem] sm:h-[420px]" /></Suspense></div></div></section>
 
       <section className="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-20"><div className="grid gap-8 rounded-[2rem] bg-[#f3eadf] p-7 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center"><div><p className="text-xs font-bold tracking-[0.17em] text-[#a75b39]">YOUR TRAVEL NOTE</p><h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight">좋았던 쉼은, 다음 여행의 시작이 됩니다.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-[#706155]">저장한 장소, 다녀온 기록, AI가 제안한 코스를 나의 여행 페이지에서 차분히 모아 보세요.</p></div>{isAuthenticated ? <Link href="/me" className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#2d453a] px-5 text-sm font-bold text-white hover:bg-[#22372e]"><Bookmark className="h-4 w-4" /> 나의 여행 보기</Link> : <Button onClick={startLogin} className="h-12 rounded-full bg-[#2d453a] px-5 text-sm font-bold text-white hover:bg-[#22372e]"><Bookmark className="mr-2 h-4 w-4" /> 로그인하고 여행 저장</Button>}</div></section>
     </main>
     <footer className="border-t border-[#e6dbd0] bg-[#fbf8f3] px-5 py-10"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 text-xs leading-5 text-[#77695c] sm:flex-row lg:px-3"><p>온기행은 검토된 큐레이션을 바탕으로 여행 영감을 돕습니다. 운영 정보는 방문 전 공식 채널에서 확인하세요.</p><p>건강 관련 내용은 일반적인 연구 정보이며 의료 조언이 아닙니다.</p></div></footer>
   </div>;
 }
+
+function MapLoading({ className }: { className: string }) { return <div className={`grid place-items-center bg-[#f8f4ee] text-sm text-[#77695e] ${className}`}>온기 지도를 불러오는 중입니다.</div>; }
 
 function FilterPill({ label, value, options, labels, onChange }: { label: string; value?: string; options: string[]; labels?: Record<string, string>; onChange: (value?: string) => void }) {
   return <div className="relative"><select aria-label={label} value={value ?? ""} onChange={event => onChange(event.target.value || undefined)} className={`h-9 appearance-none rounded-full border px-3 pr-8 text-xs font-semibold outline-none transition ${value ? "border-[#c97249] bg-[#fff2ea] text-[#9e4f2d]" : "border-[#e8ddd1] bg-[#fcfaf7] text-[#695d53]"}`}><option value="">{label}</option>{options.map(option => <option key={option} value={option}>{labels?.[option] ?? option}</option>)}</select><ChevronRight className="pointer-events-none absolute right-2.5 top-2.5 h-3.5 w-3.5 rotate-90 text-[#947e6b]" /></div>;

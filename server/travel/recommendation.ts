@@ -80,6 +80,12 @@ function parseCourse(value: string, preference: TravelPreference): TravelCourse 
   }
 }
 
+export function extractLLMText(content: string | Array<{ type: "text"; text: string } | { type: "image_url" } | { type: "file_url" }> | null | undefined) {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.filter((part): part is { type: "text"; text: string } => part.type === "text").map(part => part.text).join("\n");
+}
+
 export async function generateTravelCourse(preference: TravelPreference): Promise<TravelCourse> {
   const fallback = createFallbackCourse(preference);
   try {
@@ -127,10 +133,9 @@ export async function generateTravelCourse(preference: TravelPreference): Promis
           },
         },
       },
-      maxTokens: 1200,
     });
     const content = response.choices[0]?.message?.content;
-    return parseCourse(typeof content === "string" ? content : "", preference) ?? fallback;
+    return parseCourse(extractLLMText(content), preference) ?? fallback;
   } catch {
     return fallback;
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createFallbackCourse } from "./recommendation";
+import { createFallbackCourse, extractLLMText } from "./recommendation";
 import { nextStopPosition } from "../db.travel";
 
 describe("createFallbackCourse", () => {
@@ -19,5 +19,10 @@ describe("createFallbackCourse", () => {
   it("assigns the next plan position from the current maximum rather than row count", () => {
     expect(nextStopPosition([])).toBe(0);
     expect(nextStopPosition([0, 1, 4])).toBe(5);
+  });
+
+  it("reads structured text whether the model returns a string or content parts", () => {
+    expect(extractLLMText('{"title":"문자열"}')).toBe('{"title":"문자열"}');
+    expect(extractLLMText([{ type: "text", text: '{"title":"배열"}' }])).toBe('{"title":"배열"}');
   });
 });

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import type { TravelPlace } from "@shared/travelCatalog";
-import { ArrowUpRight, Bookmark, Heart, Sparkles } from "lucide-react";
+import { ArrowUpRight, BadgeCheck, Bookmark, Heart, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 
 const categoryLabel = { sauna: "사우나", jjimjilbang: "찜질방", "hot-spring": "온천" } as const;
@@ -34,6 +34,7 @@ export default function PlaceCard({ place, saved, canSave }: PlaceCardProps) {
             <span className="rounded-full bg-[#f6f1e9] px-2.5 py-1 text-[11px] font-medium text-[#6f6254]">{place.region} · {place.city}</span>
           </div>
           <h3 className="font-serif text-xl font-semibold tracking-tight text-[#2f2620]">{place.name}</h3>
+          <p className={`mt-2 flex items-center gap-1 text-[11px] font-semibold ${place.verification.status === "official" ? "text-[#4a7158]" : "text-[#9a7252]"}`}><BadgeCheck className="h-3.5 w-3.5" /> {place.verification.status === "official" ? "공식 정보 확인" : "큐레이션 초안"} · {place.verification.verifiedAt.replaceAll("-", ".")}</p>
         </div>
         <button aria-label={`${place.name} 저장`} onClick={onSave} disabled={favorite.isPending} className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border transition ${saved ? "border-[#ba6038] bg-[#ba6038] text-white" : "border-[#e6dbce] bg-white text-[#765e4b] hover:border-[#ba6038] hover:text-[#ba6038]"}`}>
           <Heart className={`h-4 w-4 ${saved ? "fill-current" : ""}`} />

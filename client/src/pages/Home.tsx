@@ -8,6 +8,7 @@ import { ArrowDown, ArrowRight, Bookmark, ChevronRight, Compass, MapPinned, Sear
 import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { getPlace, type TravelPlace } from "@shared/travelCatalog";
+import { travelGuides } from "@shared/travelGuides";
 
 const TravelMap = lazy(() => import("@/components/TravelMap"));
 
@@ -39,7 +40,7 @@ export default function Home() {
     <header className="sticky top-0 z-30 border-b border-[#eee4d9]/80 bg-[#f7f3ed]/90 backdrop-blur-xl">
       <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 lg:px-8">
         <Link href="/" className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#2d453a] text-[#f7debf]"><Waves className="h-4 w-4" /></span><span className="font-serif text-xl font-semibold tracking-tight">온기행</span></Link>
-        <nav className="hidden items-center gap-7 text-sm font-medium text-[#675c52] md:flex"><a href="#explore" className="hover:text-[#a55231]">탐색</a><a href="#ai-course" className="hover:text-[#a55231]">AI 코스</a><a href="#map" className="hover:text-[#a55231]">지도</a><Link href="/me" className="hover:text-[#a55231]">나의 여행</Link></nav>
+        <nav className="hidden items-center gap-7 text-sm font-medium text-[#675c52] md:flex"><a href="#explore" className="hover:text-[#a55231]">탐색</a><a href="#ai-course" className="hover:text-[#a55231]">AI 코스</a><a href="#map" className="hover:text-[#a55231]">지도</a><Link href="/guides" className="hover:text-[#a55231]">가이드</Link><Link href="/me" className="hover:text-[#a55231]">나의 여행</Link></nav>
         {isAuthenticated ? <Link href="/me" className="rounded-full bg-[#2d453a] px-4 py-2 text-xs font-bold text-white">{user?.name ?? "나의 여행"}</Link> : <button onClick={startLogin} className="rounded-full bg-[#2d453a] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#22372e]">여행 저장하기</button>}
       </div>
     </header>
@@ -61,6 +62,8 @@ export default function Home() {
         <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-bold tracking-[0.17em] text-[#aa6442]">CURATED MOMENTS</p><h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">어떤 쉼이 필요한가요?</h2></div><p className="max-w-sm text-sm leading-6 text-[#776b60]">좋아하는 장면부터 고르면, 장소와 동선의 결이 한결 또렷해집니다.</p></div>
         <div className="grid gap-4 md:grid-cols-3">{categoryCopy.map((item, index) => <button key={item.key} onClick={() => document.getElementById(index === 0 ? "explore" : "ai-course")?.scrollIntoView({ behavior: "smooth" })} className={`group relative min-h-44 overflow-hidden rounded-[1.5rem] bg-gradient-to-br ${item.gradient} p-6 text-left transition hover:-translate-y-1 hover:shadow-xl`}><span className="absolute -right-6 -top-9 font-serif text-9xl text-white/30">0{index + 1}</span><span className="relative text-xs font-bold tracking-widest text-[#715342]">SCENE 0{index + 1}</span><h3 className="relative mt-7 font-serif text-2xl font-semibold text-[#3b2d24]">{item.key}</h3><p className="relative mt-2 max-w-xs text-sm leading-5 text-[#5e4c40]">{item.description}</p><ChevronRight className="relative mt-4 h-4 w-4 text-[#714832] transition group-hover:translate-x-1" /></button>)}</div>
       </section>
+
+      <section className="border-y border-[#e5ddd2] bg-[#fffaf5] py-12 lg:py-16"><div className="mx-auto max-w-7xl px-5 lg:px-8"><div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-bold tracking-[0.17em] text-[#a65d3a]">TRAVEL GUIDEBOOK</p><h2 className="mt-2 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">온천 여행을 더 잘 쉬는 법</h2></div><Link href="/guides" className="inline-flex items-center gap-1 text-sm font-bold text-[#9f552f] hover:underline">가이드 전체 보기 <ArrowRight className="h-4 w-4" /></Link></div><div className="grid gap-4 lg:grid-cols-3">{travelGuides.map((guide, index) => <Link key={guide.slug} href={`/guides/${guide.slug}`} className="group rounded-[1.5rem] border border-[#eadfd3] bg-white p-5 transition hover:-translate-y-1 hover:shadow-[0_18px_36px_-28px_rgba(58,38,20,.38)]"><span className="text-xs font-bold tracking-[0.14em] text-[#aa6442]">0{index + 1} · {guide.eyebrow}</span><h3 className="mt-5 font-serif text-2xl font-semibold">{guide.title}</h3><p className="mt-3 min-h-20 text-sm leading-6 text-[#6e6156]">{guide.intro}</p><span className="mt-5 inline-flex items-center gap-1 text-sm font-bold text-[#9b522e]">읽어보기 <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span></Link>)}</div></div></section>
 
       <section id="explore" className="scroll-mt-20 border-y border-[#e9e0d5] bg-[#fbf8f3] py-12 lg:py-16">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">

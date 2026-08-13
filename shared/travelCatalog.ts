@@ -1,6 +1,15 @@
 export type PlaceCategory = "sauna" | "jjimjilbang" | "hot-spring";
 export type PriceBand = "light" | "balanced" | "signature";
 
+export type PlaceVerification = {
+  status: "official" | "curation-draft";
+  verifiedAt: string;
+  sourceLabel: string;
+  sourceUrl: string;
+  officialUrl?: string;
+  operatingNote?: string;
+};
+
 export type TravelPlace = {
   id: string;
   name: string;
@@ -16,6 +25,7 @@ export type TravelPlace = {
   summary: string;
   highlight: string;
   usageTip: string;
+  verification: PlaceVerification;
   neighborhood: { title: string; type: "food" | "sight"; description: string }[];
   science: { studyType: string; title: string; summary: string; sourceLabel: string; sourceUrl: string };
 };
@@ -36,6 +46,14 @@ export const travelPlaces: TravelPlace[] = [
     summary: "도시 한복판에서 여러 온열 휴식 공간을 차분하게 즐기기 좋은 대형 웰니스 스폿입니다.",
     highlight: "여행 중 비나 더위를 피해 오래 머물기 좋은 실내형 휴식",
     usageTip: "주말에는 입장 전 운영 시간과 혼잡도를 확인하고, 센텀시티 산책을 앞뒤 일정으로 연결해 보세요.",
+    verification: {
+      status: "official",
+      verifiedAt: "2026-08-13",
+      sourceLabel: "신세계백화점 스파랜드 공식 안내",
+      sourceUrl: "https://www.shinsegae.com/store/entertainment/centum-spaland.do?storeCd=SC00008",
+      officialUrl: "https://www.shinsegae.com/store/entertainment/centum-spaland.do?storeCd=SC00008",
+      operatingNote: "운영 시간·요금·기본 이용 시간은 공식 안내를 확인하세요.",
+    },
     neighborhood: [
       { title: "영화의전당 주변 산책", type: "sight", description: "해 질 무렵 건축과 야외 공간을 둘러보기 좋은 동선입니다." },
       { title: "센텀시티 로컬 다이닝", type: "food", description: "가벼운 식사부터 저녁까지 선택 폭이 넓어 휴식 후 이동 부담이 적습니다." },
@@ -63,6 +81,13 @@ export const travelPlaces: TravelPlace[] = [
     summary: "동래 온천권의 역사와 함께 온천욕 중심의 느린 휴식을 계획하기 좋은 장소입니다.",
     highlight: "도시 여행 안에 온천 휴식을 자연스럽게 넣는 전통 온천 동선",
     usageTip: "입욕 전후에는 수분을 충분히 보충하고, 장시간 고온 환경 이용은 본인 컨디션에 맞춰 조절하세요.",
+    verification: {
+      status: "official",
+      verifiedAt: "2026-08-13",
+      sourceLabel: "비짓부산 시설 안내",
+      sourceUrl: "https://www.visitbusan.net/index.do?menuCd=DOM_000000202008001000&uc_seq=1754&lang_cd=ko",
+      operatingNote: "주소·대중교통·운영 정보는 방문 전 출처 페이지에서 다시 확인하세요.",
+    },
     neighborhood: [
       { title: "동래 온천장 골목", type: "food", description: "온천 후 따뜻한 한 끼를 찾기 좋은 오래된 상권입니다." },
       { title: "금강공원", type: "sight", description: "온천 전후 짧게 몸을 풀며 걷기 좋은 녹지 공간입니다." },
@@ -90,6 +115,14 @@ export const travelPlaces: TravelPlace[] = [
     summary: "쇼핑과 식사, 찜질 휴식을 한 번에 계획하려는 수도권 당일 여행에 어울리는 복합형 공간입니다.",
     highlight: "일정 조율이 쉬운 도심형 올인원 휴식 코스",
     usageTip: "체류 시간을 넉넉히 잡고, 이동이 많은 날이라면 한낮보다 늦은 오후 이용을 고려해 보세요.",
+    verification: {
+      status: "curation-draft",
+      verifiedAt: "2026-08-13",
+      sourceLabel: "운영 정보 보강 중",
+      sourceUrl: "https://www.starfield.co.kr/",
+      officialUrl: "https://www.starfield.co.kr/",
+      operatingNote: "운영 시간·요금 등 행동 정보는 공식 확인 전까지 제공하지 않습니다.",
+    },
     neighborhood: [
       { title: "호수공원 산책", type: "sight", description: "휴식 전후로 빛과 바람을 느끼며 걷기 좋은 대표적인 도심 산책 동선입니다." },
       { title: "킨텍스 인근 식사", type: "food", description: "다양한 메뉴를 빠르게 선택할 수 있어 동행 취향이 다를 때 편합니다." },
@@ -117,6 +150,14 @@ export const travelPlaces: TravelPlace[] = [
     summary: "온천 체험과 넉넉한 체류 시간을 중심에 두고 싶은 근교 휴양 여행에 맞는 선택지입니다.",
     highlight: "하루의 속도를 낮추고 휴식을 중심으로 짜는 근교 온천 여행",
     usageTip: "야외 시설 이용 여부와 계절 운영 정보를 방문 전 공식 채널에서 확인하세요.",
+    verification: {
+      status: "official",
+      verifiedAt: "2026-08-13",
+      sourceLabel: "파라다이스 스파 도고 공식 안내",
+      sourceUrl: "https://www.paradisespa.co.kr/",
+      officialUrl: "https://www.paradisespa.co.kr/",
+      operatingNote: "시즌별 이용권과 야외 시설 운영 여부는 공식 예약 페이지에서 확인하세요.",
+    },
     neighborhood: [
       { title: "도고 온천권", type: "sight", description: "온천 마을의 느린 분위기를 즐기며 이동 거리를 줄일 수 있습니다." },
       { title: "아산 로컬 식사", type: "food", description: "온천 일정에 맞춰 식사 시간을 유연하게 조정하기 좋습니다." },
@@ -144,6 +185,14 @@ export const travelPlaces: TravelPlace[] = [
     summary: "산과 계곡의 풍경 속에서 숙박과 온천을 느리게 이어가기 좋은 자연형 휴양지입니다.",
     highlight: "이동 자체를 줄이고 하룻밤 머무르며 회복에 집중하는 여행",
     usageTip: "산간 지역은 계절·날씨에 따라 이동 시간이 달라질 수 있으므로, 도착과 귀가 동선을 여유 있게 잡으세요.",
+    verification: {
+      status: "official",
+      verifiedAt: "2026-08-13",
+      sourceLabel: "덕구온천 공식 안내",
+      sourceUrl: "https://www.dukgu.com/",
+      officialUrl: "https://www.dukgu.com/",
+      operatingNote: "온천·숙박 운영과 계절 패키지는 공식 공지에서 확인하세요.",
+    },
     neighborhood: [
       { title: "응봉산 자락", type: "sight", description: "무리하지 않는 범위의 가벼운 자연 산책을 더하기 좋습니다." },
       { title: "울진 로컬 식사", type: "food", description: "온천 후 부담이 적은 식사로 하루를 마무리해 보세요." },
@@ -171,6 +220,14 @@ export const travelPlaces: TravelPlace[] = [
     summary: "설악산 자락의 공기와 함께 온천을 여행의 중심 장면으로 두기 좋은 산속 휴양지입니다.",
     highlight: "산책과 온천 사이의 긴 여백을 즐기는 고요한 주말",
     usageTip: "계절별 도로 상황과 숙박·온천 운영 시간을 사전에 확인하고, 산행과 고온욕을 같은 날 무리하게 겹치지 마세요.",
+    verification: {
+      status: "curation-draft",
+      verifiedAt: "2026-08-13",
+      sourceLabel: "공식 정보 보강 중",
+      sourceUrl: "https://www.greenyardhotel.com/",
+      officialUrl: "https://www.greenyardhotel.com/",
+      operatingNote: "운영 정보와 이용 조건은 공식 채널 확인 후 확정합니다.",
+    },
     neighborhood: [
       { title: "오색 약수권 산책", type: "sight", description: "짧은 거리에서 자연을 느끼고 다시 휴식으로 돌아오기 좋습니다." },
       { title: "양양 로컬 식사", type: "food", description: "여행 전후 가벼운 식사를 연결해 무리 없는 일정을 만들 수 있습니다." },

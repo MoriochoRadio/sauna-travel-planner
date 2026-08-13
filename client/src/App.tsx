@@ -8,6 +8,7 @@ import MobileBottomNav from "./components/MobileBottomNav";
 import Home from "./pages/Home";
 import MyPage from "./pages/MyPage";
 import PlaceDetail from "./pages/PlaceDetail";
+import Guides, { GuideDetail } from "./pages/Guides";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -15,6 +16,8 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/places/:id"} component={PlaceDetail} />
+      <Route path={"/guides"} component={Guides} />
+      <Route path={"/guides/:slug"} component={GuideDetail} />
       <Route path={"/me"} component={MyPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

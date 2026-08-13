@@ -11,4 +11,9 @@ describe("travel catalog", () => {
     expect(travelPlaces.every(place => place.science.sourceUrl.startsWith("https://"))).toBe(true);
     expect(getPlace("spaland-centum-city")?.science.summary).toContain("보장");
   });
+
+  it("keeps a visible verification source for every place", () => {
+    expect(travelPlaces.every(place => place.verification.sourceUrl.startsWith("https://"))).toBe(true);
+    expect(travelPlaces.filter(place => place.verification.status === "official").length).toBeGreaterThan(0);
+  });
 });

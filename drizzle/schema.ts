@@ -39,6 +39,16 @@ export const places = mysqlTable("places", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const placeVerificationRecords = mysqlTable("placeVerificationRecords", {
+  placeId: varchar("placeId", { length: 128 }).primaryKey(),
+  status: mysqlEnum("status", ["draft", "verified", "needs-review"]).default("draft").notNull(),
+  sourceUrl: text("sourceUrl"),
+  verifiedAt: timestamp("verifiedAt"),
+  internalNote: varchar("internalNote", { length: 500 }),
+  updatedBy: int("updatedBy").notNull().references(() => users.id, { onDelete: "cascade" }),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const favoritePlaces = mysqlTable("favoritePlaces", {
   userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
   placeId: varchar("placeId", { length: 128 }).notNull(),
@@ -51,7 +61,15 @@ export const tripPlans = mysqlTable("tripPlans", {
   title: varchar("title", { length: 120 }).notNull(),
   region: varchar("region", { length: 80 }).notNull(),
   coverPlaceId: varchar("coverPlaceId", { length: 128 }),
+  scheduledFor: timestamp("scheduledFor"),
+  budgetLimit: int("budgetLimit"),
+  shareToken: varchar("shareToken", { length: 32 }).unique(),
+  isShared: boolean("isShared").default(false).notNull(),
   isArchived: boolean("isArchived").default(false).notNull(),
+  adminStatus: mysqlEnum("adminStatus", ["active", "review", "archived"]).default("active").notNull(),
+  adminNote: varchar("adminNote", { length: 500 }),
+  adminUpdatedBy: int("adminUpdatedBy"),
+  adminUpdatedAt: timestamp("adminUpdatedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -61,7 +79,19 @@ export const tripPlanStops = mysqlTable("tripPlanStops", {
   planId: int("planId").notNull().references(() => tripPlans.id, { onDelete: "cascade" }),
   placeId: varchar("placeId", { length: 128 }).notNull(),
   position: int("position").notNull(),
+  startTime: varchar("startTime", { length: 5 }),
+  estimatedCost: int("estimatedCost"),
+  durationMinutes: int("durationMinutes"),
   note: varchar("note", { length: 240 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const tripPlanChecklistItems = mysqlTable("tripPlanChecklistItems", {
+  id: int("id").autoincrement().primaryKey(),
+  planId: int("planId").notNull().references(() => tripPlans.id, { onDelete: "cascade" }),
+  label: varchar("label", { length: 180 }).notNull(),
+  isCompleted: boolean("isCompleted").default(false).notNull(),
+  position: int("position").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

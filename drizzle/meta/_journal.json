@@ -15,6 +15,27 @@
       "when": 1786509581078,
       "tag": "0001_open_prodigy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786600574812,
+      "tag": "0002_useful_hitman",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1786601144830,
+      "tag": "0003_woozy_network",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1786601592474,
+      "tag": "0004_absent_overlord",
+      "breakpoints": true
     }
   ]
 }

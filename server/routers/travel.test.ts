@@ -3,6 +3,7 @@ import type { TrpcContext } from "../_core/context";
 
 const dbMocks = vi.hoisted(() => ({
   addTripPlanStop: vi.fn(),
+  addChecklistItem: vi.fn(),
   addVisitRecord: vi.fn(),
   createTripPlan: vi.fn(),
   listFavoritePlaceIds: vi.fn(),
@@ -10,10 +11,14 @@ const dbMocks = vi.hoisted(() => ({
   listTripPlans: vi.fn(),
   listVisitRecords: vi.fn(),
   moveTripPlanStop: vi.fn(),
+  removeChecklistItem: vi.fn(),
   removeTripPlanStop: vi.fn(),
   saveRecommendation: vi.fn(),
+  setPlanSharing: vi.fn(),
+  toggleChecklistItem: vi.fn(),
   toggleFavoritePlace: vi.fn(),
   updateTripPlanStop: vi.fn(),
+  updateTripPlan: vi.fn(),
 }));
 
 vi.mock("../db.travel", () => dbMocks);
@@ -45,6 +50,11 @@ describe("travel router", () => {
     dbMocks.toggleFavoritePlace.mockResolvedValue(true);
     dbMocks.addTripPlanStop.mockResolvedValue(undefined);
     dbMocks.updateTripPlanStop.mockResolvedValue(undefined);
+    dbMocks.updateTripPlan.mockResolvedValue(undefined);
+    dbMocks.addChecklistItem.mockResolvedValue(undefined);
+    dbMocks.toggleChecklistItem.mockResolvedValue(undefined);
+    dbMocks.removeChecklistItem.mockResolvedValue(undefined);
+    dbMocks.setPlanSharing.mockResolvedValue({ isShared: true, shareToken: "qa-share-token-123" });
   });
 
   it("routes favorite saves through the authenticated server user", async () => {
@@ -65,6 +75,19 @@ describe("travel router", () => {
     const caller = appRouter.createCaller(createContext(42));
     await expect(caller.travel.planner.updateStop({ planId: 73, stopId: 7, note: "오후 휴식으로 기록" })).resolves.toEqual({ success: true });
     expect(dbMocks.updateTripPlanStop).toHaveBeenCalledWith(42, { planId: 73, stopId: 7, note: "오후 휴식으로 기록" });
+  });
+
+  it("keeps date, budget, checklist and sharing actions scoped to the authenticated owner", async () => {
+    const caller = appRouter.createCaller(createContext(42));
+    const scheduledFor = new Date("2026-09-12T00:00:00.000Z");
+    await expect(caller.travel.planner.update({ planId: 73, title: "부산 리셋", scheduledFor, budgetLimit: 120000 })).resolves.toEqual({ success: true });
+    await expect(caller.travel.planner.checklist.add({ planId: 73, label: "수분 보충용 물" })).resolves.toEqual({ success: true });
+    await expect(caller.travel.planner.checklist.toggle({ planId: 73, itemId: 4, isCompleted: true })).resolves.toEqual({ success: true });
+    await expect(caller.travel.planner.share({ planId: 73, isShared: true })).resolves.toEqual({ isShared: true, shareToken: "qa-share-token-123" });
+    expect(dbMocks.updateTripPlan).toHaveBeenCalledWith(42, { planId: 73, title: "부산 리셋", scheduledFor, budgetLimit: 120000 });
+    expect(dbMocks.addChecklistItem).toHaveBeenCalledWith(42, { planId: 73, label: "수분 보충용 물" });
+    expect(dbMocks.toggleChecklistItem).toHaveBeenCalledWith(42, { planId: 73, itemId: 4, isCompleted: true });
+    expect(dbMocks.setPlanSharing).toHaveBeenCalledWith(42, { planId: 73, isShared: true });
   });
 
   it("filters the public catalog and preserves its curated fallback itinerary", async () => {

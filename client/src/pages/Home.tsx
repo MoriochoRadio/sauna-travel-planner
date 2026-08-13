@@ -9,6 +9,7 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { getPlace, type TravelPlace } from "@shared/travelCatalog";
 import { travelGuides } from "@shared/travelGuides";
+import BrandSeal from "@/components/BrandSeal";
 
 const TravelMap = lazy(() => import("@/components/TravelMap"));
 
@@ -39,7 +40,7 @@ export default function Home() {
   return <div className="min-h-screen overflow-x-hidden bg-[#f7f3ed] pb-20 text-[#302720] md:pb-0">
     <header className="sticky top-0 z-30 border-b border-[#eee4d9]/80 bg-[#f7f3ed]/90 backdrop-blur-xl">
       <div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 lg:px-8">
-        <Link href="/" className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-full bg-[#2d453a] text-[#f7debf]"><Waves className="h-4 w-4" /></span><span className="font-serif text-xl font-semibold tracking-tight">온기행</span></Link>
+        <Link href="/" aria-label="온기행 홈"><BrandSeal compact /></Link>
         <nav className="hidden items-center gap-7 text-sm font-medium text-[#675c52] md:flex"><a href="#explore" className="hover:text-[#a55231]">탐색</a><a href="#ai-course" className="hover:text-[#a55231]">AI 코스</a><a href="#map" className="hover:text-[#a55231]">지도</a><Link href="/guides" className="hover:text-[#a55231]">가이드</Link><Link href="/me" className="hover:text-[#a55231]">나의 여행</Link></nav>
         {isAuthenticated ? <Link href="/me" className="rounded-full bg-[#2d453a] px-4 py-2 text-xs font-bold text-white">{user?.name ?? "나의 여행"}</Link> : <button onClick={startLogin} className="rounded-full bg-[#2d453a] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#22372e]">여행 저장하기</button>}
       </div>

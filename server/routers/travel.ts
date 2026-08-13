@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { companions, facilities, getPlace, moods, regions, travelPlaces } from "../../shared/travelCatalog";
-import { createTripPlan, addTripPlanStop, addVisitRecord, listFavoritePlaceIds, listRecommendations, listTripPlans, listVisitRecords, moveTripPlanStop, removeTripPlanStop, saveRecommendation, toggleFavoritePlace, updateTripPlanStop } from "../db.travel";
+import { addChecklistItem, createTripPlan, addTripPlanStop, addVisitRecord, getSharedTripPlan, listFavoritePlaceIds, listRecommendations, listTripPlans, listVisitRecords, moveTripPlanStop, removeChecklistItem, removeTripPlanStop, saveRecommendation, setPlanSharing, toggleChecklistItem, toggleFavoritePlace, updateTripPlan, updateTripPlanStop } from "../db.travel";
 import { createFallbackCourse, generateTravelCourse, type TravelPreference } from "../travel/recommendation";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
@@ -14,6 +14,8 @@ const preferenceSchema = z.object({
   budget: z.enum(priceBands),
   companion: z.string().min(1),
 });
+
+const planMetadataSchema = z.object({ title: z.string().min(1).max(80).optional(), scheduledFor: z.coerce.date().nullable().optional(), budgetLimit: z.number().int().min(0).max(100000000).nullable().optional() });
 
 export const travelRouter = router({
   catalog: router({
@@ -49,7 +51,8 @@ export const travelRouter = router({
   }),
   planner: router({
     list: protectedProcedure.query(async ({ ctx }) => listTripPlans(ctx.user.id)),
-    create: protectedProcedure.input(z.object({ title: z.string().min(1).max(80), region: z.string().min(1), coverPlaceId: z.string().optional() })).mutation(async ({ ctx, input }) => ({ id: await createTripPlan({ userId: ctx.user.id, title: input.title, region: input.region, coverPlaceId: input.coverPlaceId ?? null }) })),
+    create: protectedProcedure.input(z.object({ title: z.string().min(1).max(80), region: z.string().min(1), coverPlaceId: z.string().optional(), scheduledFor: z.coerce.date().nullable().optional(), budgetLimit: z.number().int().min(0).max(100000000).nullable().optional() })).mutation(async ({ ctx, input }) => ({ id: await createTripPlan({ userId: ctx.user.id, title: input.title, region: input.region, coverPlaceId: input.coverPlaceId ?? null, scheduledFor: input.scheduledFor, budgetLimit: input.budgetLimit }) })),
+    update: protectedProcedure.input(planMetadataSchema.extend({ planId: z.number().int().positive() })).mutation(async ({ ctx, input }) => { await updateTripPlan(ctx.user.id, input); return { success: true }; }),
     addStop: protectedProcedure.input(z.object({ planId: z.number().int().positive(), placeId: z.string(), note: z.string().max(240).optional() })).mutation(async ({ ctx, input }) => {
       if (!getPlace(input.placeId)) throw new Error("Place not found");
       await addTripPlanStop(ctx.user.id, { ...input, note: input.note ?? null });
@@ -59,7 +62,7 @@ export const travelRouter = router({
       await removeTripPlanStop(ctx.user.id, input.planId, input.stopId);
       return { success: true };
     }),
-    updateStop: protectedProcedure.input(z.object({ planId: z.number().int().positive(), stopId: z.number().int().positive(), note: z.string().max(240).optional() })).mutation(async ({ ctx, input }) => {
+    updateStop: protectedProcedure.input(z.object({ planId: z.number().int().positive(), stopId: z.number().int().positive(), note: z.string().max(240).nullable().optional(), startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().optional(), estimatedCost: z.number().int().min(0).max(100000000).nullable().optional(), durationMinutes: z.number().int().min(0).max(1440).nullable().optional() })).mutation(async ({ ctx, input }) => {
       await updateTripPlanStop(ctx.user.id, input);
       return { success: true };
     }),
@@ -67,6 +70,13 @@ export const travelRouter = router({
       await moveTripPlanStop(ctx.user.id, input);
       return { success: true };
     }),
+    checklist: router({
+      add: protectedProcedure.input(z.object({ planId: z.number().int().positive(), label: z.string().trim().min(1).max(180) })).mutation(async ({ ctx, input }) => { await addChecklistItem(ctx.user.id, input); return { success: true }; }),
+      toggle: protectedProcedure.input(z.object({ planId: z.number().int().positive(), itemId: z.number().int().positive(), isCompleted: z.boolean() })).mutation(async ({ ctx, input }) => { await toggleChecklistItem(ctx.user.id, input); return { success: true }; }),
+      remove: protectedProcedure.input(z.object({ planId: z.number().int().positive(), itemId: z.number().int().positive() })).mutation(async ({ ctx, input }) => { await removeChecklistItem(ctx.user.id, input); return { success: true }; }),
+    }),
+    share: protectedProcedure.input(z.object({ planId: z.number().int().positive(), isShared: z.boolean() })).mutation(async ({ ctx, input }) => setPlanSharing(ctx.user.id, input)),
+    shared: publicProcedure.input(z.object({ token: z.string().min(10).max(32) })).query(async ({ input }) => getSharedTripPlan(input.token)),
   }),
   profile: router({
     visits: protectedProcedure.query(async ({ ctx }) => listVisitRecords(ctx.user.id)),

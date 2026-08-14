@@ -36,11 +36,16 @@ await command("Page.reload", { ignoreCache: true });
 await new Promise((resolve) => setTimeout(resolve, 1800));
 await command("Runtime.enable");
 await evaluate("new Promise((resolve, reject) => { const limit = Date.now() + 10000; const wait = () => document.querySelectorAll('.place').length === 6 ? resolve() : Date.now() > limit ? reject(new Error('Static cards did not render')) : setTimeout(wait, 25); wait(); })");
+await evaluate("localStorage.setItem('ongihaeng-static-plan', '[]')");
+await command("Page.reload", { ignoreCache: true });
+await new Promise((resolve) => setTimeout(resolve, 1800));
+await evaluate("new Promise((resolve, reject) => { const limit = Date.now() + 10000; const wait = () => document.querySelectorAll('.place').length === 6 ? resolve() : Date.now() > limit ? reject(new Error('Static cards did not render after reset')) : setTimeout(wait, 25); wait(); })");
 
 const result = {};
 result.initialPlaceCount = await evaluate("document.querySelectorAll('.place').length");
 result.heroImage = await evaluate("getComputedStyle(document.querySelector('.hero')).backgroundImage.includes('ongihaeng-hero.webp')");
 result.officialLinkCount = await evaluate("[...document.querySelectorAll('a[target=_blank]')].filter(link => link.href.startsWith('https://')).length");
+result.verificationBadges = await evaluate("document.querySelectorAll('.place .verification').length === 6 && [...document.querySelectorAll('.place .verification')].some(badge => badge.textContent.includes('공식 정보 확인 · 2026.08.13')) && [...document.querySelectorAll('.place .verification')].some(badge => badge.textContent.includes('공식 정보 보강 중 · 2026.08.13'))");
 await evaluate("[...document.querySelectorAll('button.filter')].find(button => button.textContent.trim() === '부산').click()");
 result.busanPlaceCount = await evaluate("document.querySelectorAll('.place').length");
 await evaluate("document.querySelector('.place .add').click()");
@@ -51,6 +56,10 @@ await evaluate("localStorage.setItem('ongihaeng-static-plan', '{broken')");
 await command("Page.reload", { ignoreCache: true });
 await new Promise((resolve) => setTimeout(resolve, 1800));
 result.corruptStorageRecovery = await evaluate("document.querySelector('#planList').textContent.includes('아직 담은 장소가 없어요') && localStorage.getItem('ongihaeng-static-plan') === '[]'");
+await evaluate("addPlan('spaland')");
+result.backupCode = await evaluate("exportPlan() === '{\"version\":1,\"placeIds\":[\"spaland\"]}'");
+await evaluate("document.querySelector('#planImportText').value = '{\"version\":1,\"placeIds\":[\"deokgu\",\"missing-place\",\"deokgu\"]}'; importPlan()");
+result.backupRestore = await evaluate("JSON.parse(localStorage.getItem('ongihaeng-static-plan')).join(',') === 'deokgu' && document.querySelector('#planList').textContent.includes('덕구온천 리조트') && document.querySelector('#planBackupStatus').textContent.includes('일정을 불러왔어요')");
 
 socket.close();
 console.log(JSON.stringify(result, null, 2));

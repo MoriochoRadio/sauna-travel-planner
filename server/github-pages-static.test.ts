@@ -12,6 +12,13 @@ describe("GitHub Pages static edition", () => {
     expect(html).toContain("공식 정보");
   });
 
+  it("shows explicit verification status and check dates for every curated place", () => {
+    expect([...html.matchAll(/status:'(official|curation-draft)',verifiedAt:'\d{4}-\d{2}-\d{2}'/g)]).toHaveLength(6);
+    expect(html).toContain("공식 정보 확인");
+    expect(html).toContain("공식 정보 보강 중");
+    expect(html).toContain("verification");
+  });
+
   it("keeps six HTTPS official links without runtime backend dependencies", () => {
     const sourceUrls = [...html.matchAll(/source:'(https:[^']+)'/g)].map((match) => match[1]);
     expect(sourceUrls).toHaveLength(6);
@@ -37,9 +44,10 @@ describe("GitHub Pages static edition", () => {
     const script = html.match(/<script>([\s\S]+)<\/script>/)?.[1];
     expect(script).toBeDefined();
 
-    const elements = new Map<string, { innerHTML: string; textContent: string; scrollIntoView: () => void }>();
-    for (const selector of ["#filters", "#placesGrid", "#planList", "#planTotal", "#planner"]) {
-      elements.set(selector, { innerHTML: "", textContent: "", scrollIntoView: () => undefined });
+    type MockElement = { innerHTML: string; textContent: string; value: string; hidden: boolean; scrollIntoView: () => void; focus: () => void; select: () => void };
+    const elements = new Map<string, MockElement>();
+    for (const selector of ["#filters", "#placesGrid", "#planList", "#planTotal", "#planner", "#planImportText", "#planImportPanel", "#planBackupStatus"]) {
+      elements.set(selector, { innerHTML: "", textContent: "", value: "", hidden: false, scrollIntoView: () => undefined, focus: () => undefined, select: () => undefined });
     }
     const storage = new Map<string, string>([["ongihaeng-static-plan", "{malformed"]]);
     const sandbox: Record<string, unknown> = {
@@ -60,6 +68,17 @@ describe("GitHub Pages static edition", () => {
     (sandbox.addPlan as (placeId: string) => void)("spaland");
     expect(elements.get("#planList")?.innerHTML).toContain("스파랜드 센텀시티");
     expect(storage.get("ongihaeng-static-plan")).toBe('["spaland"]');
+
+    expect((sandbox.exportPlan as () => string)()).toBe('{"version":1,"placeIds":["spaland"]}');
+    elements.get("#planImportText")!.value = '{"version":1,"placeIds":["deokgu","missing-place","deokgu"]}';
+    (sandbox.importPlan as () => void)();
+    expect(elements.get("#planList")?.innerHTML).toContain("덕구온천 리조트");
+    expect(elements.get("#planList")?.innerHTML).not.toContain("missing-place");
+    expect(storage.get("ongihaeng-static-plan")).toBe('["deokgu"]');
+
+    elements.get("#planImportText")!.value = "{broken";
+    (sandbox.importPlan as () => void)();
+    expect(elements.get("#planBackupStatus")?.textContent).toContain("복원 코드를 확인");
   });
 
   it("clearly discloses full-stack capabilities excluded from the static edition", () => {

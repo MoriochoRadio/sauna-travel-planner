@@ -14,7 +14,7 @@
 - **실시간 카카오 로컬 검색**: 선택 시군구 반경 10km 내 사우나/찜질방/온천/숙소를 실시간 조회 (키 필요, 무료)
 - **온천·사우나 보유 숙소 자동 포함**: 2일차 이상이거나 숙소 옵션 켜면, 코스 마지막에 숙소를 자동 배치 (매일 다른 숙소)
 - **추천지수(rating)**: 카카오는 리뷰/평점을 제공하지 않아, 가격대·온천보유·태그·정보완성도 기반 자체 산출 지표로 배지 표시
-- **AI 생성 + 규칙 기반 폴백**: OpenRouter 무료 모델 우선, 실패/타임아웃 시 항상 폴백 코스로 동작
+- **AI 생성 + 규칙 기반 폴백**: OpenRouter 무료 모델 우선, 실패/타임아웃/키 미설정 시 항상 폴백 코스로 동작. 폴백으로 응답하면 코스 상단에 그 사실을 표시한다 (`OPENROUTER_API_KEY` 없이도 서비스는 정상 동작)
 - **웰니스 강조**: 하루 1회 사우나 집중, 수분 500ml 안내, 사우나 전후 버퍼
 - **공유 URL**: 설정(지역/시군구/기간/취향)이 URL에 보존되어 복원·공유 가능
 - **전국 지도 자유 선택**: 지역 지도에서 임의 시군구 클릭(마커 클러스터링) + 드롭다운 선택
@@ -81,7 +81,7 @@ src/
 │                 # sigungu(230 시군구), regions-ko(전국 시군구명), rating(추천지수), share(URL)
 ├── ai/           # course.schema·prompt·generate(LLM)·fallback·engine(오케스트레이션)
 ├── lib/          # kakao(로컬 검색), tourapi(폴백), rating
-├── app/          # page + API 라우트 (/api/course, /api/places, /api/rate-limit, /api/stats)
+├── app/          # page + API 라우트 (/api/course, /api/places) · rate-limit은 라우트가 아닌 공용 모듈
 └── components/   # PlannerForm·CourseView·TravelGuides·RegionMapPicker·SaunaMap·CourseSkeleton·ErrorBoundary
 scripts/          # sync-tourapi.mjs(주간 동기화), build-sigungu.mjs(시군구 수집)
 docs/             # PRD·IA·analysis/*·design/*·deployment·review (SDLC 산출물)

@@ -44,6 +44,7 @@ export const placeVerificationRecords = mysqlTable("placeVerificationRecords", {
   status: mysqlEnum("status", ["draft", "verified", "needs-review"]).default("draft").notNull(),
   sourceUrl: text("sourceUrl"),
   verifiedAt: timestamp("verifiedAt"),
+  reviewBy: timestamp("reviewBy"),
   internalNote: varchar("internalNote", { length: 500 }),
   updatedBy: int("updatedBy").notNull().references(() => users.id, { onDelete: "cascade" }),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -1,0 +1,1 @@
+ALTER TABLE `placeVerificationRecords` ADD `reviewBy` timestamp;

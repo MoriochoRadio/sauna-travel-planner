@@ -7,7 +7,7 @@ export const adminRouter = router({
   overview: adminProcedure.query(() => getAdminOverview()),
   verifications: adminProcedure.query(() => listPlaceVerifications()),
   plans: adminProcedure.query(() => listManagedTripPlans()),
-  updateVerification: adminProcedure.input(z.object({ placeId: z.string().min(1), status: z.enum(["draft", "verified", "needs-review"]), sourceUrl: z.string().url().nullable().optional(), verifiedAt: z.coerce.date().nullable().optional(), internalNote: z.string().max(500).nullable().optional() })).mutation(async ({ ctx, input }) => {
+  updateVerification: adminProcedure.input(z.object({ placeId: z.string().min(1), status: z.enum(["draft", "verified", "needs-review"]), sourceUrl: z.string().url().nullable().optional(), verifiedAt: z.coerce.date().nullable().optional(), reviewBy: z.coerce.date().nullable().optional(), internalNote: z.string().max(500).nullable().optional() })).mutation(async ({ ctx, input }) => {
     if (!getPlace(input.placeId)) throw new Error("Place not found");
     await updatePlaceVerification({ ...input, updatedBy: ctx.user.id });
     return { success: true };

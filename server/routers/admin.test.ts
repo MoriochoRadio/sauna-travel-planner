@@ -25,8 +25,8 @@ describe("admin router", () => {
   it("writes a verification record with the authenticated admin identity", async () => {
     adminMocks.updatePlaceVerification.mockResolvedValue(undefined);
     const caller = appRouter.createCaller(createContext("admin"));
-    await expect(caller.admin.updateVerification({ placeId: "spaland-centum-city", status: "verified", sourceUrl: "https://example.com/source", verifiedAt: new Date("2026-08-13T00:00:00.000Z"), internalNote: "공식 출처 재확인" })).resolves.toEqual({ success: true });
-    expect(adminMocks.updatePlaceVerification).toHaveBeenCalledWith(expect.objectContaining({ placeId: "spaland-centum-city", status: "verified", updatedBy: 91 }));
+    await expect(caller.admin.updateVerification({ placeId: "spaland-centum-city", status: "verified", sourceUrl: "https://example.com/source", verifiedAt: new Date("2026-08-13T00:00:00.000Z"), reviewBy: new Date("2026-11-13T00:00:00.000Z"), internalNote: "공식 출처 재확인" })).resolves.toEqual({ success: true });
+    expect(adminMocks.updatePlaceVerification).toHaveBeenCalledWith(expect.objectContaining({ placeId: "spaland-centum-city", status: "verified", reviewBy: new Date("2026-11-13T00:00:00.000Z"), updatedBy: 91 }));
   });
 
   it("rejects non-admin access to operational data", async () => {

@@ -19,8 +19,8 @@
 
 ## 배포 구조
 
-`client/public/github-pages/`의 독립 HTML 파일을 GitHub Actions가 `_site/`로 복사하고, 공식 Pages 아티팩트 배포 작업이 이를 공개합니다. 따라서 정적판은 Node 서버, 데이터베이스, 비밀값, 런타임 API에 의존하지 않습니다.
+`qa/phase-1-baseline` 브랜치의 `docs/index.html`을 GitHub Pages의 발행 원본으로 사용합니다. 원본 정적 파일은 유지보수 편의를 위해 `client/public/github-pages/index.html`에도 함께 보관하며, 두 파일은 같은 내용을 유지합니다. 따라서 정적판은 Node 서버, 데이터베이스, 비밀값, 런타임 API에 의존하지 않습니다.
 
 ## 업데이트 방법
 
-정적판의 장소 정보나 문구를 수정하려면 `client/public/github-pages/index.html`을 변경하여 `qa/phase-1-baseline` 브랜치로 반영합니다. GitHub Actions가 자동으로 다시 배포합니다. 실제 운영 시간·가격·이용 조건은 정적 데이터로 확정하지 말고 공식 사이트 링크에서 확인하도록 유지합니다.
+정적판의 장소 정보나 문구를 수정하려면 `client/public/github-pages/index.html`과 `docs/index.html`을 함께 변경하여 `qa/phase-1-baseline` 브랜치로 반영합니다. GitHub Pages는 해당 브랜치의 `docs/` 폴더 변경을 감지해 다시 배포합니다. 실제 운영 시간·가격·이용 조건은 정적 데이터로 확정하지 말고 공식 사이트 링크에서 확인하도록 유지합니다.

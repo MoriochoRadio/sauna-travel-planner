@@ -35,6 +35,36 @@ export const ALL_REGIONS: Region[] = [
 export const PriceLevel = z.enum(["low", "mid", "high"]);
 export type PriceLevel = z.infer<typeof PriceLevel>;
 
+// ── 검증 큐레이션 ───────────────────────────────────────────
+// "official" = 공식 채널에서 확인함, "curation-draft" = 공식 확인 전 초안.
+// 초안 상태에서는 요금·운영 시간 같은 행동 정보를 단정해 보여주지 않는다.
+export const PlaceVerificationSchema = z.object({
+  status: z.enum(["official", "curation-draft"]),
+  verifiedAt: z.string(),                      // YYYY-MM-DD
+  sourceLabel: z.string(),
+  sourceUrl: z.string().url(),
+  officialUrl: z.string().url().optional(),
+  operatingNote: z.string().optional(),
+});
+export type PlaceVerification = z.infer<typeof PlaceVerificationSchema>;
+
+export const NeighborhoodSchema = z.object({
+  title: z.string(),
+  type: z.enum(["food", "sight"]),
+  description: z.string(),
+});
+export type Neighborhood = z.infer<typeof NeighborhoodSchema>;
+
+// 온열요법 관련 참고 정보. 효과를 보장하는 주장이 아니라 "읽는 법"을 함께 제시한다.
+export const PlaceScienceSchema = z.object({
+  studyType: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  sourceLabel: z.string(),
+  sourceUrl: z.string().url(),
+});
+export type PlaceScience = z.infer<typeof PlaceScienceSchema>;
+
 // ── 장소(사우나/맛집/볼거리 통합) ───────────────────────────
 export const PlaceSchema = z.object({
   id: z.string(),                              // 지역내 유일 (예: "seoul-sauna-01")
@@ -61,6 +91,14 @@ export const PlaceSchema = z.object({
   homepage: z.string().url().optional(),       // 공식 홈페이지
   tel: z.string().optional(),                  // 전화번호
   rating: z.number().min(0).max(5).optional(), // 추천지수 (리뷰 대체: tags/가성비/온천보유/거리 종합)
+
+  // ── 검증 큐레이션 (선택) ──────────────────────────────────
+  // 운영 시간·요금처럼 자주 바뀌는 정보는 앱이 확정하지 않고 공식 출처로 넘긴다.
+  // 검증일을 함께 보여줘 사용자가 정보의 신선도를 스스로 판단할 수 있게 한다.
+  verification: PlaceVerificationSchema.optional(),
+  usageTip: z.string().optional(),             // 이용 전후 유의사항 한 줄
+  neighborhood: z.array(NeighborhoodSchema).optional(), // 주변 맛집·볼거리
+  science: PlaceScienceSchema.optional(),      // 온열요법 관련 근거 메모
 });
 export type Place = z.infer<typeof PlaceSchema>;
 

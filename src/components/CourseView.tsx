@@ -142,6 +142,71 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                       {s.tip && (
                         <div className="text-xs text-steam font-medium mt-1.5">💧 {s.tip}</div>
                       )}
+
+                      {/* 공식 출처를 직접 확인한 장소는 검증 상태와 확인 날짜를 함께 보여준다.
+                          운영 시간·요금은 자주 바뀌므로 여기서 단정하지 않고 출처로 넘긴다. */}
+                      {place?.verification && (
+                        <div className="mt-2 rounded-md border border-onsen/15 bg-onsen-soft/50 px-2.5 py-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={
+                                place.verification.status === "official"
+                                  ? "rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700"
+                                  : "rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600"
+                              }
+                            >
+                              {place.verification.status === "official" ? "✓ 공식 확인" : "· 확인 중"}
+                            </span>
+                            <span className="text-xs text-bark-soft">{place.verification.verifiedAt} 기준</span>
+                            <a
+                              href={place.verification.officialUrl ?? place.verification.sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-onsen font-medium underline decoration-onsen/40 hover:decoration-onsen"
+                            >
+                              {place.verification.sourceLabel}
+                            </a>
+                          </div>
+                          {place.verification.operatingNote && (
+                            <p className="mt-1 text-xs text-bark-soft leading-relaxed">
+                              {place.verification.operatingNote}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {place?.usageTip && (
+                        <div className="mt-1.5 text-xs text-bark-soft leading-relaxed">🧭 {place.usageTip}</div>
+                      )}
+
+                      {place?.neighborhood && place.neighborhood.length > 0 && (
+                        <ul className="mt-1.5 space-y-0.5">
+                          {place.neighborhood.map((n) => (
+                            <li key={n.title} className="text-xs text-bark-soft leading-relaxed">
+                              {n.type === "food" ? "🍜" : "🏞"} <b className="text-bark">{n.title}</b> — {n.description}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {place?.science && (
+                        <details className="mt-1.5">
+                          <summary className="cursor-pointer text-xs font-medium text-onsen">
+                            🔬 {place.science.title}
+                          </summary>
+                          <p className="mt-1 text-xs text-bark-soft leading-relaxed">
+                            <span className="font-semibold">{place.science.studyType}</span> · {place.science.summary}{" "}
+                            <a
+                              href={place.science.sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-onsen underline decoration-onsen/40 hover:decoration-onsen"
+                            >
+                              {place.science.sourceLabel}
+                            </a>
+                          </p>
+                        </details>
+                      )}
                     </div>
                   </li>
                 );

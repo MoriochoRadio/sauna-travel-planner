@@ -1,5 +1,6 @@
 import type { RegionData, Place } from "./schema";
 import { enrichedPlaces } from "./seed.enriched";
+import { verifiedByRegion } from "./verified";
 import { findSigungu } from "./sigungu";
 import { computeRating } from "@/lib/rating";
 
@@ -22,12 +23,14 @@ function withSigungu(p: Place): Place {
   return s ? { ...base, sigungu: s } : base;
 }
 
-// curated + tourAPI 보강 병합 (중복 id 제거)
+// curated + 검증 큐레이션 + tourAPI 보강 병합 (중복 id 제거)
+// 공식 출처를 직접 확인한 verified 장소를 curated 바로 뒤에 둬서 추천 후보에서 앞자리를 갖게 한다.
 function mergeRegionPlaces(curated: Place[], regionId: string): Place[] {
+  const verified = verifiedByRegion[regionId] ?? [];
   const enriched = enrichedPlaces[regionId] ?? [];
   const merged = curated.map(withSigungu);
   const seen = new Set(curated.map((p) => p.id));
-  for (const p of enriched) {
+  for (const p of [...verified, ...enriched]) {
     if (!seen.has(p.id)) {
       merged.push(withSigungu(p));
       seen.add(p.id);

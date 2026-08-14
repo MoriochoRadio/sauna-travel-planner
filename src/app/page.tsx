@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PlannerForm } from "@/components/PlannerForm";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TravelGuides } from "@/components/TravelGuides";
 import { decodeInputFromQuery } from "@/data/share";
 import type { PlannerInput } from "@/data/schema";
 
@@ -78,6 +79,10 @@ export default function Home() {
             <PlannerForm initialInput={autoInput} autoSubmit={autoSubmit} />
           </ErrorBoundary>
         )}
+
+        <ErrorBoundary>
+          <TravelGuides />
+        </ErrorBoundary>
 
         <footer className="text-center text-xs text-bark-soft/70 mt-10 space-y-1">
           <p>💡 지역·기간·취향을 입력하면 하루 코스가 완성돼요</p>

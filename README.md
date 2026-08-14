@@ -9,6 +9,8 @@
 ## ✨ 기능
 
 - **전국 커버리지**: 17개 시도 + 경주(독립 region), 230개 시군구 선택 가능
+- **검증 큐레이션**: 공식 출처를 직접 확인한 대표 온천·찜질 시설 6곳. 장소마다 **확인한 출처와 검증일**, 이용 전후 유의사항, 주변 맛집·볼거리, 온열요법 참고 정보를 함께 제공. 운영 시간·요금처럼 자주 바뀌는 정보는 앱이 단정하지 않고 공식 출처로 넘김
+- **여행 가이드**: "어떻게 쉬어야 하는지"를 다루는 가이드 3편 (부산 당일 온천, 첫 온천 체크리스트, 1박 자연 온천)
 - **실시간 카카오 로컬 검색**: 선택 시군구 반경 10km 내 사우나/찜질방/온천/숙소를 실시간 조회 (키 필요, 무료)
 - **온천·사우나 보유 숙소 자동 포함**: 2일차 이상이거나 숙소 옵션 켜면, 코스 마지막에 숙소를 자동 배치 (매일 다른 숙소)
 - **추천지수(rating)**: 카카오는 리뷰/평점을 제공하지 않아, 가격대·온천보유·태그·정보완성도 기반 자체 산출 지표로 배지 표시
@@ -58,7 +60,7 @@ npm run test:e2e   # Playwright E2E (10개 시나리오)
 | 게이트 | 상태 |
 |---|---|
 | 타입체크 | ✅ 0 error |
-| 단위 테스트 | ✅ 35 passed |
+| 단위 테스트 | ✅ 44 passed |
 | E2E (Playwright) | ✅ 10 passed |
 | 빌드 | ✅ 성공 |
 
@@ -74,12 +76,13 @@ npm run test:e2e   # Playwright E2E (10개 시나리오)
 
 ```
 src/
-├── data/         # schema(Zod), seed(18곳 curated+숙소), seed.enriched(tourAPI 보강)
+├── data/         # schema(Zod), seed(18곳 curated+숙소), verified(공식 확인 6곳), guides(여행 가이드)
+│                 # seed.enriched(tourAPI 보강)
 │                 # sigungu(230 시군구), regions-ko(전국 시군구명), rating(추천지수), share(URL)
 ├── ai/           # course.schema·prompt·generate(LLM)·fallback·engine(오케스트레이션)
 ├── lib/          # kakao(로컬 검색), tourapi(폴백), rating
 ├── app/          # page + API 라우트 (/api/course, /api/places, /api/rate-limit, /api/stats)
-└── components/   # PlannerForm·CourseView·RegionMapPicker·SaunaMap·CourseSkeleton·ErrorBoundary
+└── components/   # PlannerForm·CourseView·TravelGuides·RegionMapPicker·SaunaMap·CourseSkeleton·ErrorBoundary
 scripts/          # sync-tourapi.mjs(주간 동기화), build-sigungu.mjs(시군구 수집)
 docs/             # PRD·IA·analysis/*·design/*·deployment·review (SDLC 산출물)
 .github/workflows/# ci(타입/테스트/e2e), sync-tourapi, verify-kakao
@@ -104,7 +107,7 @@ docs/             # PRD·IA·analysis/*·design/*·deployment·review (SDLC 산�
 | 브랜치 | 내용 |
 |---|---|
 | `main` | **정본.** Vercel에 배포되는 서비스 (이 README가 설명하는 앱) |
-| `manus/ongihaeng-rebuild` | 2026-08 Manus로 시도한 "온기행" 전면 재작성본(tRPC·MySQL 풀스택, 큐레이션 6곳). 장소별 공식 출처·검증일, 과학 근거 인용, 여행 가이드 등 이식 대상 콘텐츠가 들어 있어 보존 |
+| `manus/ongihaeng-rebuild` | 2026-08 Manus로 시도한 "온기행" 전면 재작성본(tRPC·MySQL 풀스택). 검증 큐레이션 6곳·여행 가이드 3편·히어로 비주얼은 `main`으로 이식 완료. 원본 대조용으로 보존 |
 
 ## 🗺 로드맵
 

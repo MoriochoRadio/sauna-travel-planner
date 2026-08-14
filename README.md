@@ -4,6 +4,8 @@
 
 > 지역 / 세부지역(시군구) / 기간 / 취향을 입력하면 → 일자별 타임라인(장소·시간·추천이유·팁·예상비용·추천지수)을 생성합니다.
 
+### 👉 **[바로 사용하기 — sauna-travel-planner.vercel.app](https://sauna-travel-planner.vercel.app)**
+
 ## ✨ 기능
 
 - **전국 커버리지**: 17개 시도 + 경주(독립 region), 230개 시군구 선택 가능
@@ -96,6 +98,13 @@ docs/             # PRD·IA·analysis/*·design/*·deployment·review (SDLC 산�
 - **숙소 자동 포함**: 다일차 여행 또는 옵션 켜짐 → 코스 마지막 stop(21:00)에 숙소 배치, 매일 다른 숙소 지향
 - **fail-soft**: LLM/외부 API 실패 시 항상 규칙 기반 코스로 응답 (런타임 중단 없음)
 - **무료 유지**: Vercel Free + GitHub Actions + 카카오/OpenRouter 무료 티어
+
+## 🌿 브랜치
+
+| 브랜치 | 내용 |
+|---|---|
+| `main` | **정본.** Vercel에 배포되는 서비스 (이 README가 설명하는 앱) |
+| `manus/ongihaeng-rebuild` | 2026-08 Manus로 시도한 "온기행" 전면 재작성본(tRPC·MySQL 풀스택, 큐레이션 6곳). 장소별 공식 출처·검증일, 과학 근거 인용, 여행 가이드 등 이식 대상 콘텐츠가 들어 있어 보존 |
 
 ## 🗺 로드맵
 

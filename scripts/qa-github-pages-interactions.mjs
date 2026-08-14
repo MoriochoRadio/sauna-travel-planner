@@ -49,7 +49,7 @@ result.verificationBadges = await evaluate("document.querySelectorAll('.place .v
 await evaluate("[...document.querySelectorAll('button.filter')].find(button => button.textContent.trim() === '부산').click()");
 result.busanPlaceCount = await evaluate("document.querySelectorAll('.place').length");
 await evaluate("document.querySelector('.place .add').click()");
-result.addedPlan = await evaluate("JSON.parse(localStorage.getItem('ongihaeng-static-plan')).includes('spaland') && document.querySelector('#planList').textContent.includes('스파랜드 센텀시티')");
+result.addedPlan = await evaluate("JSON.parse(localStorage.getItem('ongihaeng-static-plan')).some(item => item.id === 'spaland') && document.querySelector('#planList').textContent.includes('스파랜드 센텀시티')");
 await evaluate("document.querySelector('.remove').click()");
 result.removedPlan = await evaluate("JSON.parse(localStorage.getItem('ongihaeng-static-plan')).length === 0 && document.querySelector('#planList').textContent.includes('아직 담은 장소가 없어요')");
 await evaluate("localStorage.setItem('ongihaeng-static-plan', '{broken')");
@@ -57,9 +57,9 @@ await command("Page.reload", { ignoreCache: true });
 await new Promise((resolve) => setTimeout(resolve, 1800));
 result.corruptStorageRecovery = await evaluate("document.querySelector('#planList').textContent.includes('아직 담은 장소가 없어요') && localStorage.getItem('ongihaeng-static-plan') === '[]'");
 await evaluate("addPlan('spaland')");
-result.backupCode = await evaluate("exportPlan() === '{\"version\":1,\"placeIds\":[\"spaland\"]}'");
-await evaluate("document.querySelector('#planImportText').value = '{\"version\":1,\"placeIds\":[\"deokgu\",\"missing-place\",\"deokgu\"]}'; importPlan()");
-result.backupRestore = await evaluate("JSON.parse(localStorage.getItem('ongihaeng-static-plan')).join(',') === 'deokgu' && document.querySelector('#planList').textContent.includes('덕구온천 리조트') && document.querySelector('#planBackupStatus').textContent.includes('일정을 불러왔어요')");
+result.backupCode = await evaluate("exportPlan() === '{\"version\":2,\"items\":[{\"id\":\"spaland\",\"note\":\"\"}]}'");
+await evaluate("document.querySelector('#planImportText').value = '{\"version\":2,\"items\":[{\"id\":\"deokgu\",\"note\":\"숙박 후 입욕\"},{\"id\":\"spaland\",\"note\":\"오후 이용\"},{\"id\":\"missing-place\",\"note\":\"제외\"}]}' ; importPlan(); movePlanItem(1, -1); updatePlanNote('spaland', '저녁 식사 전 이용')");
+result.backupRestore = await evaluate("JSON.stringify(JSON.parse(localStorage.getItem('ongihaeng-static-plan'))) === '[{\"id\":\"spaland\",\"note\":\"저녁 식사 전 이용\"},{\"id\":\"deokgu\",\"note\":\"숙박 후 입욕\"}]' && document.querySelector('#planList').textContent.includes('덕구온천 리조트') && document.querySelector('#planBackupStatus').textContent.includes('일정을 불러왔어요')");
 
 socket.close();
 console.log(JSON.stringify(result, null, 2));

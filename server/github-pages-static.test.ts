@@ -67,14 +67,21 @@ describe("GitHub Pages static edition", () => {
 
     (sandbox.addPlan as (placeId: string) => void)("spaland");
     expect(elements.get("#planList")?.innerHTML).toContain("스파랜드 센텀시티");
-    expect(storage.get("ongihaeng-static-plan")).toBe('["spaland"]');
+    expect(storage.get("ongihaeng-static-plan")).toBe('[{"id":"spaland","note":""}]');
 
-    expect((sandbox.exportPlan as () => string)()).toBe('{"version":1,"placeIds":["spaland"]}');
+    expect((sandbox.exportPlan as () => string)()).toBe('{"version":2,"items":[{"id":"spaland","note":""}]}');
     elements.get("#planImportText")!.value = '{"version":1,"placeIds":["deokgu","missing-place","deokgu"]}';
     (sandbox.importPlan as () => void)();
     expect(elements.get("#planList")?.innerHTML).toContain("덕구온천 리조트");
     expect(elements.get("#planList")?.innerHTML).not.toContain("missing-place");
-    expect(storage.get("ongihaeng-static-plan")).toBe('["deokgu"]');
+    expect(storage.get("ongihaeng-static-plan")).toBe('[{"id":"deokgu","note":""}]');
+
+    elements.get("#planImportText")!.value = '{"version":2,"items":[{"id":"deokgu","note":"숙박 후 아침 입욕"},{"id":"spaland","note":"오후 이용"},{"id":"missing-place","note":"제외"}]}';
+    (sandbox.importPlan as () => void)();
+    (sandbox.movePlanItem as (index: number, direction: number) => void)(1, -1);
+    (sandbox.updatePlanNote as (placeId: string, note: string) => void)("spaland", "저녁 식사 전 이용");
+    expect((sandbox.exportPlan as () => string)()).toBe('{"version":2,"items":[{"id":"spaland","note":"저녁 식사 전 이용"},{"id":"deokgu","note":"숙박 후 아침 입욕"}]}');
+    expect(storage.get("ongihaeng-static-plan")).toContain('"note":"저녁 식사 전 이용"');
 
     elements.get("#planImportText")!.value = "{broken";
     (sandbox.importPlan as () => void)();

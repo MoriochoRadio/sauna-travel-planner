@@ -92,7 +92,7 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                           href={place ? kakaoMapUrl(place) : `https://map.kakao.com/?q=${encodeURIComponent(s.title)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-semibold text-bark underline decoration-onsen/40 hover:decoration-onsen"
+                          className="inline-flex min-h-[24px] items-center font-semibold text-bark underline decoration-onsen/40 hover:decoration-onsen"
                         >
                           {s.title}
                         </a>
@@ -124,7 +124,7 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                             href={kakaoMapUrl(place)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-onsen font-medium underline decoration-onsen/40 hover:decoration-onsen"
+                            className="inline-flex min-h-[24px] items-center py-0.5 text-xs text-onsen font-medium underline decoration-onsen/40 hover:decoration-onsen"
                           >
                             카카오맵
                           </a>
@@ -132,7 +132,7 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                             href={naverMapUrl(place)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-onsen font-medium underline decoration-onsen/40 hover:decoration-onsen"
+                            className="inline-flex min-h-[24px] items-center py-0.5 text-xs text-onsen font-medium underline decoration-onsen/40 hover:decoration-onsen"
                           >
                             네이버맵
                           </a>
@@ -162,7 +162,7 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                               href={place.verification.officialUrl ?? place.verification.sourceUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-onsen font-medium underline decoration-onsen/40 hover:decoration-onsen"
+                              className="inline-flex min-h-[24px] items-center py-0.5 text-xs text-onsen font-medium underline decoration-onsen/40 hover:decoration-onsen"
                             >
                               {place.verification.sourceLabel}
                             </a>

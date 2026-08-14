@@ -97,7 +97,7 @@ export function TravelGuides() {
                                   href={place.verification.officialUrl ?? place.verification.sourceUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-onsen underline decoration-onsen/40 hover:decoration-onsen"
+                                  className="inline-flex min-h-[24px] items-center py-0.5 text-onsen underline decoration-onsen/40 hover:decoration-onsen"
                                 >
                                   {place.verification.sourceLabel}
                                 </a>{" "}

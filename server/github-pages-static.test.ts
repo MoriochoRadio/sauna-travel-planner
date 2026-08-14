@@ -11,6 +11,11 @@ describe("GitHub Pages static edition", () => {
     expect(html).toContain("공식 정보");
   });
 
+  it("keeps the existing hot-spring hero visual in the static edition", () => {
+    expect(html).toContain("ongihaeng-hero.webp");
+    expect(html).toContain("background-image");
+  });
+
   it("keeps the itinerary in browser storage without requiring a backend", () => {
     expect(html).toContain("localStorage");
     expect(html).toContain("ongihaeng-static-plan");

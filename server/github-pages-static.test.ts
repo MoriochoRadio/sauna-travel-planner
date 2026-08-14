@@ -87,6 +87,10 @@ describe("GitHub Pages static edition", () => {
     expect((sandbox.exportPlan as () => string)()).toBe('{"version":2,"items":[{"id":"spaland","note":"저녁 식사 전 이용"},{"id":"deokgu","note":"숙박 후 아침 입욕"}]}');
     expect(storage.get("ongihaeng-static-plan")).toContain('"note":"저녁 식사 전 이용"');
 
+    elements.get("#planImportText")!.value = JSON.stringify({ version: 2, items: [{ id: "spaland", note: "가".repeat(241) }] });
+    (sandbox.importPlan as () => void)();
+    expect(JSON.parse(storage.get("ongihaeng-static-plan") ?? "[]")[0].note).toHaveLength(240);
+
     elements.get("#planImportText")!.value = "{broken";
     (sandbox.importPlan as () => void)();
     expect(elements.get("#planBackupStatus")?.textContent).toContain("복원 코드를 확인");

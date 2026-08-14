@@ -29,6 +29,17 @@ export async function createTripPlan(input: { userId: number; title: string; reg
   return Number(result[0].insertId);
 }
 
+export async function importStaticTripPlan(input: { userId: number; title: string; region: string; coverPlaceId: string; stops: Array<{ placeId: string; note: string | null }> }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  return db.transaction(async tx => {
+    const result = await tx.insert(tripPlans).values({ userId: input.userId, title: input.title, region: input.region, coverPlaceId: input.coverPlaceId });
+    const planId = Number(result[0].insertId);
+    await tx.insert(tripPlanStops).values(input.stops.map((stop, position) => ({ planId, placeId: stop.placeId, note: stop.note, position })));
+    return planId;
+  });
+}
+
 export function nextStopPosition(positions: number[]) {
   return positions.length ? Math.max(...positions) + 1 : 0;
 }

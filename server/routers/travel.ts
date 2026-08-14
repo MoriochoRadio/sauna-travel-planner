@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { companions, facilities, getPlace, moods, regions, travelPlaces } from "../../shared/travelCatalog";
-import { addChecklistItem, createTripPlan, addTripPlanStop, addVisitRecord, getSharedTripPlan, listFavoritePlaceIds, listRecommendations, listTripPlans, listVisitRecords, moveTripPlanStop, removeChecklistItem, removeTripPlanStop, saveRecommendation, setPlanSharing, toggleChecklistItem, toggleFavoritePlace, updateTripPlan, updateTripPlanStop } from "../db.travel";
+import { addChecklistItem, createTripPlan, addTripPlanStop, addVisitRecord, getSharedTripPlan, importStaticTripPlan, listFavoritePlaceIds, listRecommendations, listTripPlans, listVisitRecords, moveTripPlanStop, removeChecklistItem, removeTripPlanStop, saveRecommendation, setPlanSharing, toggleChecklistItem, toggleFavoritePlace, updateTripPlan, updateTripPlanStop } from "../db.travel";
 import { createFallbackCourse, generateTravelCourse, type TravelPreference } from "../travel/recommendation";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
@@ -16,6 +16,18 @@ const preferenceSchema = z.object({
 });
 
 const planMetadataSchema = z.object({ title: z.string().min(1).max(80).optional(), scheduledFor: z.coerce.date().nullable().optional(), budgetLimit: z.number().int().min(0).max(100000000).nullable().optional() });
+const staticPlannerPlaceIdMap = {
+  spaland: "spaland-centum-city",
+  hurshimchung: "hurshimchung",
+  aquafield: "aquafield-goyang",
+  dogo: "asan-spavis",
+  deokgu: "deokgu-onsen-resort",
+  osak: "osack-greenyard",
+} as const;
+const staticPlannerImportSchema = z.object({
+  title: z.string().trim().min(1).max(80).optional(),
+  items: z.array(z.object({ id: z.string().min(1).max(128), note: z.string().max(240).optional() })).min(1).max(12),
+});
 
 export const travelRouter = router({
   catalog: router({
@@ -52,6 +64,27 @@ export const travelRouter = router({
   planner: router({
     list: protectedProcedure.query(async ({ ctx }) => listTripPlans(ctx.user.id)),
     create: protectedProcedure.input(z.object({ title: z.string().min(1).max(80), region: z.string().min(1), coverPlaceId: z.string().optional(), scheduledFor: z.coerce.date().nullable().optional(), budgetLimit: z.number().int().min(0).max(100000000).nullable().optional() })).mutation(async ({ ctx, input }) => ({ id: await createTripPlan({ userId: ctx.user.id, title: input.title, region: input.region, coverPlaceId: input.coverPlaceId ?? null, scheduledFor: input.scheduledFor, budgetLimit: input.budgetLimit }) })),
+    importStatic: protectedProcedure.input(staticPlannerImportSchema).mutation(async ({ ctx, input }) => {
+      const seenPlaceIds = new Set<string>();
+      let skippedCount = 0;
+      const stops = input.items.flatMap(item => {
+        const placeId = staticPlannerPlaceIdMap[item.id as keyof typeof staticPlannerPlaceIdMap];
+        const place = placeId ? getPlace(placeId) : null;
+        if (!place || seenPlaceIds.has(place.id)) { skippedCount += 1; return []; }
+        seenPlaceIds.add(place.id);
+        return [{ place, placeId: place.id, note: item.note?.trim() || null }];
+      });
+      if (!stops.length) throw new Error("가져올 수 있는 정적판 장소가 없습니다.");
+      const regions = Array.from(new Set(stops.map(stop => stop.place.region)));
+      const planId = await importStaticTripPlan({
+        userId: ctx.user.id,
+        title: input.title ?? "정적판에서 가져온 일정",
+        region: regions.length === 1 ? regions[0] : "여러 지역",
+        coverPlaceId: stops[0].placeId,
+        stops: stops.map(stop => ({ placeId: stop.placeId, note: stop.note })),
+      });
+      return { planId, importedCount: stops.length, skippedCount };
+    }),
     update: protectedProcedure.input(planMetadataSchema.extend({ planId: z.number().int().positive() })).mutation(async ({ ctx, input }) => { await updateTripPlan(ctx.user.id, input); return { success: true }; }),
     addStop: protectedProcedure.input(z.object({ planId: z.number().int().positive(), placeId: z.string(), note: z.string().max(240).optional() })).mutation(async ({ ctx, input }) => {
       if (!getPlace(input.placeId)) throw new Error("Place not found");

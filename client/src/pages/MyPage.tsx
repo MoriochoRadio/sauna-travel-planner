@@ -32,6 +32,15 @@ export default function MyPage() {
   const toggleChecklist = trpc.travel.planner.checklist.toggle.useMutation({ onSuccess: refreshPlans });
   const removeChecklist = trpc.travel.planner.checklist.remove.useMutation({ onSuccess: refreshPlans });
   const sharePlan = trpc.travel.planner.share.useMutation({ onSuccess: refreshPlans });
+  const [staticPlanCode, setStaticPlanCode] = useState("");
+  const importStaticPlan = trpc.travel.planner.importStatic.useMutation({
+    onSuccess: async (result) => {
+      await refreshPlans();
+      setStaticPlanCode("");
+      toast.success(`${result.importedCount}곳을 새 플랜으로 가져왔어요.${result.skippedCount ? ` ${result.skippedCount}곳은 제외됐어요.` : ""}`);
+    },
+    onError: error => toast.error(error.message),
+  });
   const favoriteIds = favoritesQuery.data ?? [];
   const plans = plansQuery.data ?? [];
   const visits = visitsQuery.data ?? [];
@@ -43,6 +52,17 @@ export default function MyPage() {
     const timer = window.setTimeout(() => document.getElementById("trip-plans")?.scrollIntoView({ block: "start" }), 0);
     return () => window.clearTimeout(timer);
   }, [plansQuery.data]);
+  const handleStaticPlanImport = () => {
+    try {
+      const parsed = JSON.parse(staticPlanCode);
+      const rawItems = Array.isArray(parsed) ? parsed : parsed?.items ?? parsed?.placeIds;
+      if (!Array.isArray(rawItems)) throw new Error("invalid");
+      const items = rawItems.map(item => typeof item === "string" ? { id: item } : { id: item?.id, note: item?.note });
+      importStaticPlan.mutate({ items });
+    } catch {
+      toast.error("정적판에서 복사한 일정 코드를 붙여넣어 주세요.");
+    }
+  };
 
   if (loading) return <div className="grid min-h-screen place-items-center bg-[#f7f3ed] text-sm text-[#706156]">나의 여행을 준비하는 중입니다.</div>;
   if (!isAuthenticated) return <SignedOutState />;
@@ -50,7 +70,7 @@ export default function MyPage() {
   return <div className="min-h-screen bg-[#f7f3ed] pb-20 text-[#322820] md:pb-0">
     <header className="border-b border-[#e9dfd4] bg-[#f7f3ed]/90 backdrop-blur"><div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 lg:px-8"><Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-[#63564c]"><ArrowLeft className="h-4 w-4" /> 탐색으로</Link><Link href="/" aria-label="온기행 홈"><BrandSeal compact /></Link><span className="text-xs font-bold text-[#7c6c5f]">{user?.name ?? "나의"} 여행</span></div></header>
     <main className="mx-auto max-w-7xl px-5 py-9 lg:px-8 lg:py-12">
-      <p className="text-xs font-bold tracking-[0.17em] text-[#aa6442]">MY TRAVEL NOTE</p><h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight">쉬었던 순간을 모아 봐요.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-[#706155]">가고 싶은 온기와 이미 지나온 하루를 차분히 기록하는 개인 여행장입니다.</p>
+      <p className="text-xs font-bold tracking-[0.17em] text-[#aa6442]">MY TRAVEL NOTE</p><h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight">쉬었던 순간을 모아 봐요.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-[#706155]">가고 싶은 온기와 이미 지나온 하루를 차분히 기록하는 개인 여행장입니다.</p><StaticPlanImportCard code={staticPlanCode} onCodeChange={setStaticPlanCode} onImport={handleStaticPlanImport} isImporting={importStaticPlan.isPending} />
       {hasQueryError && <div role="alert" className="mt-5 rounded-2xl border border-[#e8c1b0] bg-[#fff2ea] px-4 py-3 text-sm text-[#954729]">일부 여행 기록을 불러오지 못했어요. 새로고침하거나 잠시 후 다시 시도해 주세요.</div>}
       <div className="mt-8 grid gap-4 sm:grid-cols-3"><Stat icon={<Bookmark />} label="저장한 장소" value={savedPlaces.length} /><Stat icon={<CalendarDays />} label="내 여행 플랜" value={plans.length} /><Stat icon={<History />} label="방문 기록" value={visits.length} /></div>
       <section className="mt-10"><div className="mb-5 flex items-end justify-between"><div><p className="text-xs font-bold tracking-widest text-[#a55d3b]">SAVED PLACES</p><h2 className="mt-1 font-serif text-2xl font-semibold">다음에 가고 싶은 온기</h2></div><Link href="/#explore" className="text-sm font-bold text-[#a55231]">더 찾아보기</Link></div>{savedPlaces.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{savedPlaces.map(place => <PlaceCard key={place.id} place={place} saved canSave />)}</div> : <Empty icon={<Compass />} text="아직 저장한 장소가 없어요." detail="탐색에서 마음에 드는 장소를 하트로 담아 보세요." />}</section>
@@ -62,6 +82,10 @@ export default function MyPage() {
 }
 
 function SignedOutState() { return <div className="grid min-h-screen place-items-center bg-[#f7f3ed] px-5"><div className="max-w-md text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#e9efe9] text-[#45604e]"><Bookmark className="h-6 w-6" /></div><h1 className="mt-5 font-serif text-3xl font-semibold">나의 여행을 남겨 보세요.</h1><p className="mt-3 text-sm leading-6 text-[#6e6258]">저장한 장소와 다녀온 기록, AI가 제안한 여행 코스를 한곳에서 관리할 수 있습니다.</p><Button onClick={startLogin} className="mt-6 h-12 rounded-full bg-[#2d453a] px-5 text-sm font-bold text-white hover:bg-[#22372e]">로그인하고 시작하기</Button><Link href="/" className="mt-5 flex items-center justify-center gap-1 text-sm font-bold text-[#a55231]"><ArrowLeft className="h-4 w-4" /> 탐색으로 돌아가기</Link></div></div>; }
+
+function StaticPlanImportCard({ code, onCodeChange, onImport, isImporting }: { code: string; onCodeChange: (value: string) => void; onImport: () => void; isImporting: boolean }) {
+  return <section className="mt-6 max-w-2xl rounded-[1.4rem] border border-[#e4dad0] bg-white p-5"><p className="text-xs font-bold tracking-widest text-[#a55d3b]">GITHUB PAGES IMPORT</p><h2 className="mt-2 font-serif text-xl font-semibold">정적판 일정 가져오기</h2><p className="mt-2 text-sm leading-6 text-[#706155]">GitHub Pages에서 복사한 일정 코드를 붙여넣으면, 현재 계정의 새 플랜으로만 가져옵니다. 알 수 없는 장소와 중복 항목은 자동으로 제외합니다.</p><textarea aria-label="정적판 일정 복원 코드" value={code} onChange={event => onCodeChange(event.target.value)} placeholder='{"version":2,"items":[...]}' className="mt-4 min-h-24 w-full rounded-xl border border-[#e1d4c6] bg-[#faf6f0] p-3 font-mono text-xs text-[#5e5146] outline-none focus:border-[#b96843]" /><Button type="button" onClick={onImport} disabled={!code.trim() || isImporting} className="mt-3 h-9 rounded-full bg-[#a55231] px-4 text-xs font-bold text-white hover:bg-[#8f4528]">{isImporting ? "가져오는 중" : "새 플랜으로 가져오기"}</Button></section>;
+}
 
 function PlanEditor({ plan, catalog, onAdd, onMove, onRemove, onNote }: { plan: PlanView; catalog: CatalogPlace[]; onAdd: (placeId: string) => void; onMove: (stopId: number, direction: "up" | "down") => void; onRemove: (stopId: number) => void; onNote: (stopId: number, note: string) => void }) {
   const choices = catalog.filter(place => place.region === plan.region);

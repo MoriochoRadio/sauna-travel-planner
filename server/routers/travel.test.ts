@@ -6,6 +6,7 @@ const dbMocks = vi.hoisted(() => ({
   addChecklistItem: vi.fn(),
   addVisitRecord: vi.fn(),
   createTripPlan: vi.fn(),
+  importStaticTripPlan: vi.fn(),
   listFavoritePlaceIds: vi.fn(),
   listRecommendations: vi.fn(),
   listTripPlans: vi.fn(),
@@ -47,6 +48,7 @@ describe("travel router", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dbMocks.createTripPlan.mockResolvedValue(73);
+    dbMocks.importStaticTripPlan.mockResolvedValue(91);
     dbMocks.toggleFavoritePlace.mockResolvedValue(true);
     dbMocks.addTripPlanStop.mockResolvedValue(undefined);
     dbMocks.updateTripPlanStop.mockResolvedValue(undefined);
@@ -69,6 +71,27 @@ describe("travel router", () => {
     await expect(caller.travel.planner.addStop({ planId: 73, placeId: "spaland-centum-city", note: "오후의 휴식" })).resolves.toEqual({ success: true });
     expect(dbMocks.createTripPlan).toHaveBeenCalledWith({ userId: 42, title: "부산의 느린 하루", region: "부산", coverPlaceId: "spaland-centum-city" });
     expect(dbMocks.addTripPlanStop).toHaveBeenCalledWith(42, { planId: 73, placeId: "spaland-centum-city", note: "오후의 휴식" });
+  });
+
+  it("imports only mapped static places into a new plan owned by the authenticated user", async () => {
+    const caller = appRouter.createCaller(createContext(42));
+    await expect(caller.travel.planner.importStatic({ items: [
+      { id: "deokgu", note: "숙박 후 아침 입욕" },
+      { id: "spaland", note: "오후 이용" },
+      { id: "deokgu", note: "중복" },
+      { id: "unknown-place", note: "제외" },
+    ] })).resolves.toEqual({ planId: 91, importedCount: 2, skippedCount: 2 });
+    expect(dbMocks.importStaticTripPlan).toHaveBeenCalledWith({
+      userId: 42,
+      title: "정적판에서 가져온 일정",
+      region: "여러 지역",
+      coverPlaceId: "deokgu-onsen-resort",
+      stops: [
+        { placeId: "deokgu-onsen-resort", note: "숙박 후 아침 입욕" },
+        { placeId: "spaland-centum-city", note: "오후 이용" },
+      ],
+    });
+    await expect(caller.travel.planner.importStatic({ items: [{ id: "unknown-place" }] })).rejects.toThrow("가져올 수 있는 정적판 장소가 없습니다");
   });
 
   it("updates a plan memo through the authenticated user context", async () => {

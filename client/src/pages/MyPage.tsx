@@ -5,7 +5,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import TripPlanStudio from "@/components/TripPlanStudio";
 import { ArrowDown, ArrowLeft, ArrowUp, Bookmark, CalendarDays, Compass, History, MapPinned, Save, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import BrandSeal from "@/components/BrandSeal";
@@ -13,6 +13,24 @@ import BrandSeal from "@/components/BrandSeal";
 type PlanStop = { id: number; placeId: string; position: number; note: string | null };
 type PlanView = { id: number; title: string; region: string; updatedAt: Date; stops: PlanStop[] };
 type CatalogPlace = { id: string; name: string; region: string };
+
+export function focusImportedPlanCard(planId: number) {
+  const importedPlan = document.getElementById(`trip-plan-${planId}`);
+  importedPlan?.scrollIntoView({ behavior: "smooth", block: "center" });
+  importedPlan?.focus({ preventScroll: true });
+}
+export const IMPORTED_PLAN_HIGHLIGHT_MS = 3200;
+export function useImportedPlanHighlight(availablePlanIds: number[]) {
+  const [highlightedPlanId, setHighlightedPlanId] = useState<number | null>(null);
+  const availablePlanKey = availablePlanIds.join(",");
+  useEffect(() => {
+    if (!highlightedPlanId || !availablePlanIds.includes(highlightedPlanId)) return;
+    const focusTimer = window.setTimeout(() => focusImportedPlanCard(highlightedPlanId), 0);
+    const clearHighlightTimer = window.setTimeout(() => setHighlightedPlanId(currentId => currentId === highlightedPlanId ? null : currentId), IMPORTED_PLAN_HIGHLIGHT_MS);
+    return () => { window.clearTimeout(focusTimer); window.clearTimeout(clearHighlightTimer); };
+  }, [highlightedPlanId, availablePlanKey]);
+  return { highlightedPlanId, highlightPlan: setHighlightedPlanId };
+}
 
 export default function MyPage() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -33,16 +51,20 @@ export default function MyPage() {
   const removeChecklist = trpc.travel.planner.checklist.remove.useMutation({ onSuccess: refreshPlans });
   const sharePlan = trpc.travel.planner.share.useMutation({ onSuccess: refreshPlans });
   const [staticPlanCode, setStaticPlanCode] = useState("");
+  const [staticPlanImportResult, setStaticPlanImportResult] = useState<{ planId: number; importedCount: number; skippedCount: number; skipped: { unmappedCount: number; duplicateCount: number } } | null>(null);
   const importStaticPlan = trpc.travel.planner.importStatic.useMutation({
     onSuccess: async (result) => {
       await refreshPlans();
       setStaticPlanCode("");
+      setStaticPlanImportResult(result);
+      highlightPlan(result.planId);
       toast.success(`${result.importedCount}곳을 새 플랜으로 가져왔어요.${result.skippedCount ? ` ${result.skippedCount}곳은 제외됐어요.` : ""}`);
     },
     onError: error => toast.error(error.message),
   });
   const favoriteIds = favoritesQuery.data ?? [];
   const plans = plansQuery.data ?? [];
+  const { highlightedPlanId: importedPlanId, highlightPlan } = useImportedPlanHighlight(plans.map(plan => plan.id));
   const visits = visitsQuery.data ?? [];
   const recommendations = recommendationsQuery.data ?? [];
   const savedPlaces = catalog.filter(place => favoriteIds.includes(place.id));
@@ -70,11 +92,11 @@ export default function MyPage() {
   return <div className="min-h-screen bg-[#f7f3ed] pb-20 text-[#322820] md:pb-0">
     <header className="border-b border-[#e9dfd4] bg-[#f7f3ed]/90 backdrop-blur"><div className="mx-auto flex h-[68px] max-w-7xl items-center justify-between px-5 lg:px-8"><Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-[#63564c]"><ArrowLeft className="h-4 w-4" /> 탐색으로</Link><Link href="/" aria-label="온기행 홈"><BrandSeal compact /></Link><span className="text-xs font-bold text-[#7c6c5f]">{user?.name ?? "나의"} 여행</span></div></header>
     <main className="mx-auto max-w-7xl px-5 py-9 lg:px-8 lg:py-12">
-      <p className="text-xs font-bold tracking-[0.17em] text-[#aa6442]">MY TRAVEL NOTE</p><h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight">쉬었던 순간을 모아 봐요.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-[#706155]">가고 싶은 온기와 이미 지나온 하루를 차분히 기록하는 개인 여행장입니다.</p><StaticPlanImportCard code={staticPlanCode} onCodeChange={setStaticPlanCode} onImport={handleStaticPlanImport} isImporting={importStaticPlan.isPending} />
+      <p className="text-xs font-bold tracking-[0.17em] text-[#aa6442]">MY TRAVEL NOTE</p><h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight">쉬었던 순간을 모아 봐요.</h1><p className="mt-3 max-w-xl text-sm leading-6 text-[#706155]">가고 싶은 온기와 이미 지나온 하루를 차분히 기록하는 개인 여행장입니다.</p><StaticPlanImportCard code={staticPlanCode} onCodeChange={setStaticPlanCode} onImport={handleStaticPlanImport} isImporting={importStaticPlan.isPending} result={staticPlanImportResult} onViewPlan={highlightPlan} />
       {hasQueryError && <div role="alert" className="mt-5 rounded-2xl border border-[#e8c1b0] bg-[#fff2ea] px-4 py-3 text-sm text-[#954729]">일부 여행 기록을 불러오지 못했어요. 새로고침하거나 잠시 후 다시 시도해 주세요.</div>}
       <div className="mt-8 grid gap-4 sm:grid-cols-3"><Stat icon={<Bookmark />} label="저장한 장소" value={savedPlaces.length} /><Stat icon={<CalendarDays />} label="내 여행 플랜" value={plans.length} /><Stat icon={<History />} label="방문 기록" value={visits.length} /></div>
       <section className="mt-10"><div className="mb-5 flex items-end justify-between"><div><p className="text-xs font-bold tracking-widest text-[#a55d3b]">SAVED PLACES</p><h2 className="mt-1 font-serif text-2xl font-semibold">다음에 가고 싶은 온기</h2></div><Link href="/#explore" className="text-sm font-bold text-[#a55231]">더 찾아보기</Link></div>{savedPlaces.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{savedPlaces.map(place => <PlaceCard key={place.id} place={place} saved canSave />)}</div> : <Empty icon={<Compass />} text="아직 저장한 장소가 없어요." detail="탐색에서 마음에 드는 장소를 하트로 담아 보세요." />}</section>
-      <section className="mt-10 grid gap-5 lg:grid-cols-[1.28fr_0.72fr]"><div className="rounded-[1.6rem] border border-[#e4dad0] bg-white p-6"><div className="flex items-center gap-2 text-[#a55d3b]"><MapPinned className="h-4 w-4" /><p className="text-xs font-bold tracking-widest">TRIP PLANS</p></div><h2 className="mt-2 font-serif text-2xl font-semibold">나의 여행 플랜</h2>{plans.length ? <div className="mt-5 space-y-5">{plans.map(plan => <TripPlanStudio key={plan.id} plan={plan} catalog={catalog} onAddStop={placeId => addStop.mutate({ planId: plan.id, placeId })} onMove={(stopId, direction) => moveStop.mutate({ planId: plan.id, stopId, direction })} onRemoveStop={stopId => removeStop.mutate({ planId: plan.id, stopId })} onUpdateStop={(stopId, input) => updateStop.mutate({ planId: plan.id, stopId, ...input })} onUpdatePlan={input => updatePlan.mutate({ planId: plan.id, ...input })} onAddChecklist={label => addChecklist.mutate({ planId: plan.id, label })} onToggleChecklist={(itemId, isCompleted) => toggleChecklist.mutate({ planId: plan.id, itemId, isCompleted })} onRemoveChecklist={itemId => removeChecklist.mutate({ planId: plan.id, itemId })} onShare={input => sharePlan.mutateAsync({ planId: plan.id, isShared: input })} />)}</div> : <Empty icon={<CalendarDays />} text="아직 만든 플랜이 없어요." detail="장소 상세 페이지에서 ‘플랜에 담기’를 눌러 시작하세요." compact />}</div>
+      <section id="trip-plans" className="mt-10 grid gap-5 lg:grid-cols-[1.28fr_0.72fr]"><div className="rounded-[1.6rem] border border-[#e4dad0] bg-white p-6"><div className="flex items-center gap-2 text-[#a55d3b]"><MapPinned className="h-4 w-4" /><p className="text-xs font-bold tracking-widest">TRIP PLANS</p></div><h2 className="mt-2 font-serif text-2xl font-semibold">나의 여행 플랜</h2>{plans.length ? <div className="mt-5 space-y-5">{plans.map(plan => <div key={plan.id} id={`trip-plan-${plan.id}`} tabIndex={-1} className={importedPlanId === plan.id ? "rounded-[1.7rem] outline outline-2 outline-offset-4 outline-[#b96843] transition" : ""}><TripPlanStudio plan={plan} catalog={catalog} onAddStop={placeId => addStop.mutate({ planId: plan.id, placeId })} onMove={(stopId, direction) => moveStop.mutate({ planId: plan.id, stopId, direction })} onRemoveStop={stopId => removeStop.mutate({ planId: plan.id, stopId })} onUpdateStop={(stopId, input) => updateStop.mutate({ planId: plan.id, stopId, ...input })} onUpdatePlan={input => updatePlan.mutate({ planId: plan.id, ...input })} onAddChecklist={label => addChecklist.mutate({ planId: plan.id, label })} onToggleChecklist={(itemId, isCompleted) => toggleChecklist.mutate({ planId: plan.id, itemId, isCompleted })} onRemoveChecklist={itemId => removeChecklist.mutate({ planId: plan.id, itemId })} onShare={input => sharePlan.mutateAsync({ planId: plan.id, isShared: input })} /></div>)}</div> : <Empty icon={<CalendarDays />} text="아직 만든 플랜이 없어요." detail="장소 상세 페이지에서 ‘플랜에 담기’를 눌러 시작하세요." compact />}</div>
         <div className="rounded-[1.6rem] bg-[#e9efe9] p-6"><div className="flex items-center gap-2 text-[#496552]"><SparkleIcon /><p className="text-xs font-bold tracking-widest">AI HISTORY</p></div><h2 className="mt-2 font-serif text-2xl font-semibold">추천 받은 여행의 결</h2>{recommendations.length ? <div className="mt-5 space-y-3">{recommendations.map(item => <div key={item.id} className="rounded-xl bg-white/70 p-4"><p className="text-sm font-bold">{item.region} 여행 제안</p><p className="mt-1 text-xs text-[#647369]">{item.source === "ai" ? "AI 큐레이터" : "큐레이션"} · {new Date(item.createdAt).toLocaleDateString("ko-KR")}</p></div>)}</div> : <Empty icon={<History />} text="아직 추천 이력이 없어요." detail="AI 코스 만들기에서 오늘의 여행을 시작해 보세요." compact />}</div></section>
       <section className="mt-5 rounded-[1.6rem] border border-[#e4dad0] bg-white p-6"><div className="flex items-center gap-2 text-[#a55d3b]"><History className="h-4 w-4" /><p className="text-xs font-bold tracking-widest">VISITED MOMENTS</p></div><h2 className="mt-2 font-serif text-2xl font-semibold">다녀온 온기</h2>{visits.length ? <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{visits.map(visit => { const place = catalog.find(item => item.id === visit.placeId); return <div key={visit.id} className="rounded-xl bg-[#faf6f0] p-4"><p className="font-serif text-lg font-semibold">{place?.name ?? "기록한 장소"}</p><p className="mt-1 text-xs text-[#786a5d]">{new Date(visit.visitedAt).toLocaleDateString("ko-KR")}</p>{visit.note && <p className="mt-3 text-sm leading-5 text-[#675b51]">{visit.note}</p>}</div>; })}</div> : <Empty icon={<History />} text="아직 남긴 방문 기록이 없어요." detail="장소 상세 페이지에서 ‘다녀왔어요’를 눌러 하루를 기록해 보세요." compact />}</section>
     </main>
@@ -83,8 +105,8 @@ export default function MyPage() {
 
 function SignedOutState() { return <div className="grid min-h-screen place-items-center bg-[#f7f3ed] px-5"><div className="max-w-md text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-[#e9efe9] text-[#45604e]"><Bookmark className="h-6 w-6" /></div><h1 className="mt-5 font-serif text-3xl font-semibold">나의 여행을 남겨 보세요.</h1><p className="mt-3 text-sm leading-6 text-[#6e6258]">저장한 장소와 다녀온 기록, AI가 제안한 여행 코스를 한곳에서 관리할 수 있습니다.</p><Button onClick={startLogin} className="mt-6 h-12 rounded-full bg-[#2d453a] px-5 text-sm font-bold text-white hover:bg-[#22372e]">로그인하고 시작하기</Button><Link href="/" className="mt-5 flex items-center justify-center gap-1 text-sm font-bold text-[#a55231]"><ArrowLeft className="h-4 w-4" /> 탐색으로 돌아가기</Link></div></div>; }
 
-function StaticPlanImportCard({ code, onCodeChange, onImport, isImporting }: { code: string; onCodeChange: (value: string) => void; onImport: () => void; isImporting: boolean }) {
-  return <section className="mt-6 max-w-2xl rounded-[1.4rem] border border-[#e4dad0] bg-white p-5"><p className="text-xs font-bold tracking-widest text-[#a55d3b]">GITHUB PAGES IMPORT</p><h2 className="mt-2 font-serif text-xl font-semibold">정적판 일정 가져오기</h2><p className="mt-2 text-sm leading-6 text-[#706155]">GitHub Pages에서 복사한 일정 코드를 붙여넣으면, 현재 계정의 새 플랜으로만 가져옵니다. 알 수 없는 장소와 중복 항목은 자동으로 제외합니다.</p><textarea aria-label="정적판 일정 복원 코드" value={code} onChange={event => onCodeChange(event.target.value)} placeholder='{"version":2,"items":[...]}' className="mt-4 min-h-24 w-full rounded-xl border border-[#e1d4c6] bg-[#faf6f0] p-3 font-mono text-xs text-[#5e5146] outline-none focus:border-[#b96843]" /><Button type="button" onClick={onImport} disabled={!code.trim() || isImporting} className="mt-3 h-9 rounded-full bg-[#a55231] px-4 text-xs font-bold text-white hover:bg-[#8f4528]">{isImporting ? "가져오는 중" : "새 플랜으로 가져오기"}</Button></section>;
+export function StaticPlanImportCard({ code, onCodeChange, onImport, isImporting, result, onViewPlan }: { code: string; onCodeChange: (value: string) => void; onImport: () => void; isImporting: boolean; result: { planId: number; importedCount: number; skippedCount: number; skipped: { unmappedCount: number; duplicateCount: number } } | null; onViewPlan: (planId: number) => void }) {
+  return <section className="mt-6 max-w-2xl rounded-[1.4rem] border border-[#e4dad0] bg-white p-5"><p className="text-xs font-bold tracking-widest text-[#a55d3b]">GITHUB PAGES IMPORT</p><h2 className="mt-2 font-serif text-xl font-semibold">정적판 일정 가져오기</h2><p className="mt-2 text-sm leading-6 text-[#706155]">GitHub Pages에서 복사한 일정 코드를 붙여넣으면, 현재 계정의 새 플랜으로만 가져옵니다. 알 수 없는 장소와 중복 항목은 자동으로 제외합니다.</p><textarea aria-label="정적판 일정 복원 코드" value={code} onChange={event => onCodeChange(event.target.value)} placeholder='{"version":2,"items":[...]}' className="mt-4 min-h-24 w-full rounded-xl border border-[#e1d4c6] bg-[#faf6f0] p-3 font-mono text-xs text-[#5e5146] outline-none focus:border-[#b96843]" /><Button type="button" onClick={onImport} disabled={!code.trim() || isImporting} className="mt-3 h-9 rounded-full bg-[#a55231] px-4 text-xs font-bold text-white hover:bg-[#8f4528]">{isImporting ? "가져오는 중" : "새 플랜으로 가져오기"}</Button>{result && <div role="status" className="mt-4 rounded-xl border border-[#cbdccf] bg-[#eef6ef] p-3 text-sm text-[#3f5c47]"><p className="font-bold">새 플랜에 {result.importedCount}곳을 담았어요.</p>{result.skippedCount > 0 && <p className="mt-1 text-xs leading-5">제외된 {result.skippedCount}곳: 등록되지 않은 장소 {result.skipped.unmappedCount}곳, 중복 장소 {result.skipped.duplicateCount}곳입니다.</p>}<Button type="button" variant="outline" onClick={() => onViewPlan(result.planId)} className="mt-3 h-8 border-[#a8c3ad] bg-white px-3 text-xs font-bold text-[#3f5c47] hover:bg-[#e5f0e7]">새 플랜 확인하기</Button></div>}</section>;
 }
 
 function PlanEditor({ plan, catalog, onAdd, onMove, onRemove, onNote }: { plan: PlanView; catalog: CatalogPlace[]; onAdd: (placeId: string) => void; onMove: (stopId: number, direction: "up" | "down") => void; onRemove: (stopId: number) => void; onNote: (stopId: number, note: string) => void }) {

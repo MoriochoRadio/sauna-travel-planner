@@ -80,7 +80,7 @@ describe("travel router", () => {
       { id: "spaland", note: "오후 이용" },
       { id: "deokgu", note: "중복" },
       { id: "unknown-place", note: "제외" },
-    ] })).resolves.toEqual({ planId: 91, importedCount: 2, skippedCount: 2 });
+    ] })).resolves.toEqual({ planId: 91, importedCount: 2, skippedCount: 2, skipped: { unmappedCount: 1, duplicateCount: 1 } });
     expect(dbMocks.importStaticTripPlan).toHaveBeenCalledWith({
       userId: 42,
       title: "정적판에서 가져온 일정",

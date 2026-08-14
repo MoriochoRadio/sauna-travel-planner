@@ -66,11 +66,13 @@ export const travelRouter = router({
     create: protectedProcedure.input(z.object({ title: z.string().min(1).max(80), region: z.string().min(1), coverPlaceId: z.string().optional(), scheduledFor: z.coerce.date().nullable().optional(), budgetLimit: z.number().int().min(0).max(100000000).nullable().optional() })).mutation(async ({ ctx, input }) => ({ id: await createTripPlan({ userId: ctx.user.id, title: input.title, region: input.region, coverPlaceId: input.coverPlaceId ?? null, scheduledFor: input.scheduledFor, budgetLimit: input.budgetLimit }) })),
     importStatic: protectedProcedure.input(staticPlannerImportSchema).mutation(async ({ ctx, input }) => {
       const seenPlaceIds = new Set<string>();
-      let skippedCount = 0;
+      let unmappedCount = 0;
+      let duplicateCount = 0;
       const stops = input.items.flatMap(item => {
         const placeId = staticPlannerPlaceIdMap[item.id as keyof typeof staticPlannerPlaceIdMap];
         const place = placeId ? getPlace(placeId) : null;
-        if (!place || seenPlaceIds.has(place.id)) { skippedCount += 1; return []; }
+        if (!place) { unmappedCount += 1; return []; }
+        if (seenPlaceIds.has(place.id)) { duplicateCount += 1; return []; }
         seenPlaceIds.add(place.id);
         return [{ place, placeId: place.id, note: item.note?.trim() || null }];
       });
@@ -83,7 +85,7 @@ export const travelRouter = router({
         coverPlaceId: stops[0].placeId,
         stops: stops.map(stop => ({ placeId: stop.placeId, note: stop.note })),
       });
-      return { planId, importedCount: stops.length, skippedCount };
+      return { planId, importedCount: stops.length, skippedCount: unmappedCount + duplicateCount, skipped: { unmappedCount, duplicateCount } };
     }),
     update: protectedProcedure.input(planMetadataSchema.extend({ planId: z.number().int().positive() })).mutation(async ({ ctx, input }) => { await updateTripPlan(ctx.user.id, input); return { success: true }; }),
     addStop: protectedProcedure.input(z.object({ planId: z.number().int().positive(), placeId: z.string(), note: z.string().max(240).optional() })).mutation(async ({ ctx, input }) => {

@@ -37,7 +37,8 @@
         {id:'deokgu',name:'덕구온천 리조트',region:'경북',type:'온천',tags:['자연','고요한','숙박'],desc:'산과 계곡의 풍경 속에서 숙박과 온천을 느리게 이어가기 좋은 자연형 휴양지.',price:45000,source:'https://www.dukgu.com/'},
         {id:'osak',name:'오색그린야드호텔 온천',region:'강원',type:'온천',tags:['산속','고요한','온천수'],desc:'설악산 자락의 공기와 함께 온천을 여행의 중심 장면으로 두기 좋은 산속 휴양지.',price:20000,source:'https://www.greenyardhotel.com/'}
       ];
-      const state={region:'전체',plan:JSON.parse(localStorage.getItem('ongihaeng-static-plan')||'[]')};
+      function readStoredPlan(){try{const saved=JSON.parse(localStorage.getItem('ongihaeng-static-plan')||'[]');return Array.isArray(saved)?saved.filter(id=>places.some(place=>place.id===id)):[]}catch{return []}}
+      const state={region:'전체',plan:readStoredPlan()};
       const regions=['전체',...new Set(places.map(p=>p.region))];
       const won=n=>new Intl.NumberFormat('ko-KR').format(n)+'원';
       function renderFilters(){document.querySelector('#filters').innerHTML=regions.map(r=>`<button class="filter ${state.region===r?'active':''}" onclick="setRegion('${r}')">${r}</button>`).join('')}

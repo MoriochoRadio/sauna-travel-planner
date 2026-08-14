@@ -46,6 +46,7 @@ result.initialPlaceCount = await evaluate("document.querySelectorAll('.place').l
 result.heroImage = await evaluate("getComputedStyle(document.querySelector('.hero')).backgroundImage.includes('ongihaeng-hero.webp')");
 result.officialLinkCount = await evaluate("[...document.querySelectorAll('a[target=_blank]')].filter(link => link.href.startsWith('https://')).length");
 result.verificationBadges = await evaluate("document.querySelectorAll('.place .verification').length === 6 && [...document.querySelectorAll('.place .verification')].some(badge => badge.textContent.includes('공식 정보 확인 · 2026.08.13')) && [...document.querySelectorAll('.place .verification')].some(badge => badge.textContent.includes('공식 정보 보강 중 · 2026.08.13'))");
+result.sourceContext = await evaluate("document.querySelectorAll('.place .source-note').length === 6 && document.querySelector('#placesGrid').textContent.includes('신세계백화점 스파랜드 공식 안내') && document.querySelector('#placesGrid').textContent.includes('운영 시간·요금·기본 이용 시간을 공식 안내에서 확인하세요')");
 await evaluate("[...document.querySelectorAll('button.filter')].find(button => button.textContent.trim() === '부산').click()");
 result.busanPlaceCount = await evaluate("document.querySelectorAll('.place').length");
 await evaluate("document.querySelector('.place .add').click()");

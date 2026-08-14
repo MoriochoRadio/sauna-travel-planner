@@ -14,8 +14,10 @@ describe("GitHub Pages static edition", () => {
 
   it("shows explicit verification status and check dates for every curated place", () => {
     expect([...html.matchAll(/status:'(official|curation-draft)',verifiedAt:'\d{4}-\d{2}-\d{2}'/g)]).toHaveLength(6);
+    expect([...html.matchAll(/sourceLabel:'[^']+',operatingNote:'[^']+'/g)]).toHaveLength(6);
     expect(html).toContain("공식 정보 확인");
     expect(html).toContain("공식 정보 보강 중");
+    expect(html).toContain("방문 전");
     expect(html).toContain("verification");
   });
 
@@ -59,6 +61,8 @@ describe("GitHub Pages static edition", () => {
     vm.runInNewContext(script!, sandbox);
     expect(elements.get("#placesGrid")?.innerHTML).toContain("스파랜드 센텀시티");
     expect(elements.get("#placesGrid")?.innerHTML).toContain("아쿠아필드 고양");
+    expect(elements.get("#placesGrid")?.innerHTML).toContain("신세계백화점 스파랜드 공식 안내");
+    expect(elements.get("#placesGrid")?.innerHTML).toContain("운영 시간·요금·기본 이용 시간을 공식 안내에서 확인하세요");
     expect(elements.get("#planList")?.innerHTML).toContain("아직 담은 장소가 없어요");
 
     (sandbox.setRegion as (region: string) => void)("부산");

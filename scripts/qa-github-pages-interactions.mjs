@@ -62,6 +62,7 @@ await evaluate("addPlan('spaland')");
 result.backupCode = await evaluate("exportPlan() === '{\"version\":2,\"items\":[{\"id\":\"spaland\",\"note\":\"\"}]}'");
 await evaluate("document.querySelector('#planImportText').value = '{\"version\":2,\"items\":[{\"id\":\"deokgu\",\"note\":\"숙박 후 입욕\"},{\"id\":\"spaland\",\"note\":\"오후 이용\"},{\"id\":\"missing-place\",\"note\":\"제외\"}]}' ; importPlan(); movePlanItem(1, -1); updatePlanNote('spaland', '저녁 식사 전 이용')");
 result.backupRestore = await evaluate("JSON.stringify(JSON.parse(localStorage.getItem('ongihaeng-static-plan'))) === '[{\"id\":\"spaland\",\"note\":\"저녁 식사 전 이용\"},{\"id\":\"deokgu\",\"note\":\"숙박 후 입욕\"}]' && document.querySelector('#planList').textContent.includes('덕구온천 리조트') && document.querySelector('#planBackupStatus').textContent.includes('일정을 불러왔어요')");
+result.printSummary = await evaluate("(() => { const originalOpen = window.open; let printedHtml = ''; let printCalled = false; window.open = () => ({ document: { write: html => { printedHtml += html; }, close: () => undefined }, focus: () => undefined, print: () => { printCalled = true; } }); printPlanSummary(); window.open = originalOpen; return document.querySelectorAll('.backup-button').length >= 3 && printedHtml.includes('온기행 · 나의 여행 요약') && printedHtml.includes('저녁 식사 전 이용') && printedHtml.includes('방문 전 확인') && printCalled && document.querySelector('#planBackupStatus').textContent.includes('PDF로 저장'); })()");
 
 socket.close();
 console.log(JSON.stringify(result, null, 2));

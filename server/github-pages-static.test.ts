@@ -43,9 +43,17 @@ describe("GitHub Pages static edition", () => {
     expect(html).toContain("일정에 담기");
   });
 
+  it("provides an offline-printable itinerary summary with notes and visit checks", () => {
+    expect(html).toContain("여행 요약 인쇄");
+    expect(html).toContain("printPlanSummary");
+    expect(html).toContain("방문 전 확인");
+    expect(html).toContain("window.open");
+    expect(html).toContain("escapeHtml");
+  });
+
   it("filters places and persists an itinerary using only browser APIs", () => {
-    const script = html.match(/<script>([\s\S]+)<\/script>/)?.[1];
-    expect(script).toBeDefined();
+    const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
+    expect(scripts).toHaveLength(2);
 
     type MockElement = { innerHTML: string; textContent: string; value: string; hidden: boolean; scrollIntoView: () => void; focus: () => void; select: () => void };
     const elements = new Map<string, MockElement>();
@@ -53,13 +61,16 @@ describe("GitHub Pages static edition", () => {
       elements.set(selector, { innerHTML: "", textContent: "", value: "", hidden: false, scrollIntoView: () => undefined, focus: () => undefined, select: () => undefined });
     }
     const storage = new Map<string, string>([["ongihaeng-static-plan", "{malformed"]]);
+    let printedHtml = "";
+    let printCalled = false;
     const sandbox: Record<string, unknown> = {
       document: { querySelector: (selector: string) => elements.get(selector) },
       localStorage: { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => storage.set(key, value) },
+      open: () => ({ document: { write: (html: string) => { printedHtml += html; }, close: () => undefined }, focus: () => undefined, print: () => { printCalled = true; } }),
     };
     sandbox.window = sandbox;
 
-    vm.runInNewContext(script!, sandbox);
+    for (const script of scripts) vm.runInNewContext(script, sandbox);
     expect(elements.get("#placesGrid")?.innerHTML).toContain("스파랜드 센텀시티");
     expect(elements.get("#placesGrid")?.innerHTML).toContain("아쿠아필드 고양");
     expect(elements.get("#placesGrid")?.innerHTML).toContain("신세계백화점 스파랜드 공식 안내");
@@ -88,6 +99,14 @@ describe("GitHub Pages static edition", () => {
     (sandbox.updatePlanNote as (placeId: string, note: string) => void)("spaland", "저녁 식사 전 이용");
     expect((sandbox.exportPlan as () => string)()).toBe('{"version":2,"items":[{"id":"spaland","note":"저녁 식사 전 이용"},{"id":"deokgu","note":"숙박 후 아침 입욕"}]}');
     expect(storage.get("ongihaeng-static-plan")).toContain('"note":"저녁 식사 전 이용"');
+
+    (sandbox.printPlanSummary as () => void)();
+    expect(printedHtml).toContain("온기행 · 나의 여행 요약");
+    expect(printedHtml).toContain("저녁 식사 전 이용");
+    expect(printedHtml).toContain("방문 전 확인");
+    expect(printedHtml).toContain("신세계백화점 스파랜드 공식 안내");
+    expect(printCalled).toBe(true);
+    expect(elements.get("#planBackupStatus")?.textContent).toContain("PDF로 저장");
 
     elements.get("#planImportText")!.value = JSON.stringify({ version: 2, items: [{ id: "spaland", note: "가".repeat(241) }] });
     (sandbox.importPlan as () => void)();

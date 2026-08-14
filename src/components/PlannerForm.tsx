@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import type { PlannerInput, Preference, Place } from "@/data/schema";
 import { getRegion } from "@/data/seed";
 import { getSigungus, type Sigungu } from "@/data/sigungu";
+import { shareUrl } from "@/data/share";
 import { ALL_REGIONS, REGION_LABELS } from "@/data/schema";
 import { CourseView } from "./CourseView";
 import { CourseSkeleton } from "./CourseSkeleton";
@@ -148,7 +149,18 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
           type="button"
           className="btn-secondary w-full"
           onClick={() => {
-            const url = `${window.location.origin}/?region=${region}${sigungu ? `&sigungu=${sigungu}` : ""}&days=${days}${prefs.length ? `&prefs=${prefs.join(",")}` : ""}${anchorSaunaId ? `&sauna=${anchorSaunaId}` : ""}${onsenFocus ? "&onsen=1" : ""}${!includeLodging ? "&lodging=0" : ""}${note ? `&note=${encodeURIComponent(note)}` : ""}`;
+            // 손으로 쿼리를 조립하면 한글 시군구 id("busan-중구")가 인코딩되지 않는다.
+            // 직렬화 규칙은 share.ts 한 곳에만 두고 여기서는 그대로 쓴다.
+            const url = shareUrl(window.location.origin, {
+              region,
+              sigungu,
+              days,
+              preferences: prefs,
+              note: note || undefined,
+              anchorSaunaId,
+              onsenFocus,
+              includeLodging,
+            });
             navigator.clipboard?.writeText(url);
             alert("공유 URL이 클립보드에 복사됐어요!\n" + url);
           }}

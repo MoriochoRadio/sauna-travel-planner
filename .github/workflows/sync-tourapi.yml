@@ -11,10 +11,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Node 설정
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 20
 
@@ -29,7 +29,7 @@ jobs:
         run: node scripts/test-searchkeyword.mjs
 
       - name: 커밋 (변경 시)
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "data: tourAPI 자동 보강 (주간 동기화)"
           file_pattern: "src/data/seed.enriched.ts"

@@ -60,7 +60,7 @@ npm run test:e2e   # Playwright E2E (10개 시나리오)
 | 게이트 | 상태 |
 |---|---|
 | 타입체크 | ✅ 0 error |
-| 단위 테스트 | ✅ 44 passed |
+| 단위 테스트 | ✅ 48 passed |
 | E2E (Playwright) | ✅ 10 passed |
 | 빌드 | ✅ 성공 |
 

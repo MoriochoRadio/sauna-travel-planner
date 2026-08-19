@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <button
             type="button"
             onClick={this.reset}
-            className="px-4 py-2 rounded-lg bg-onsen text-white text-sm font-medium"
+            className="btn-primary text-sm"
           >
             다시 시도
           </button>

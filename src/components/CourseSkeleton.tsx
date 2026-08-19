@@ -1,19 +1,19 @@
 export function CourseSkeleton() {
   return (
-    <section className="card p-5 mt-6 animate-pulse" aria-busy="true" aria-label="코스 생성 중">
-      <div className="h-5 bg-cream-2 rounded w-1/3 mb-3" />
-      <div className="h-3 bg-cream-2 rounded w-2/3 mb-5" />
+    <section className="card mt-6 animate-pulse p-5" aria-busy="true" aria-label="코스 생성 중">
+      <div className="mb-3 h-6 w-1/3 rounded-pill bg-cream-2" />
+      <div className="mb-5 h-3 w-2/3 rounded-pill bg-cream-2" />
       <div className="space-y-4">
         {[0, 1].map((d) => (
           <div key={d}>
-            <div className="h-4 bg-cream-2 rounded w-1/4 mb-3" />
+            <div className="mb-3 h-4 w-1/4 rounded-pill bg-cream-2" />
             <div className="space-y-3 pl-4">
               {[0, 1, 2].map((s) => (
                 <div key={s} className="flex gap-2">
-                  <div className="h-2.5 w-2.5 rounded-full bg-cream-2 shrink-0 mt-1" />
+                  <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-pill bg-clay/30" />
                   <div className="flex-1">
-                    <div className="h-3 bg-cream-2 rounded w-1/2 mb-1" />
-                    <div className="h-2.5 bg-onsen-soft rounded w-3/4" />
+                    <div className="mb-1 h-3 w-1/2 rounded-pill bg-cream-2" />
+                    <div className="h-2.5 w-3/4 rounded-pill bg-clay-soft" />
                   </div>
                 </div>
               ))}
@@ -21,7 +21,7 @@ export function CourseSkeleton() {
           </div>
         ))}
       </div>
-      <div className="h-3 bg-cream-2 rounded w-1/4 mt-5" />
+      <div className="mt-5 h-3 w-1/4 rounded-pill bg-cream-2" />
     </section>
   );
 }

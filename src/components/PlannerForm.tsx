@@ -175,21 +175,44 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8 lg:items-start">
     <div className="space-y-6">
       {/* Stepper — 이미 지났던 단계는 클릭해서 바로 이동 가능 */}
-      <ol className="flex items-center gap-2 text-sm">
-        {[1, 2, 3].map((s) => {
+      <ol className="flex items-center gap-1 text-sm">
+        {[1, 2, 3].map((s, i) => {
           const reachable = s <= maxStepReached;
+          const active = step === s;
           return (
-            <li key={s}>
+            <li key={s} className="flex flex-1 items-center gap-1">
+              {i > 0 && (
+                <span
+                  aria-hidden
+                  className={`h-px flex-1 transition-colors ${reachable ? "bg-clay/45" : "bg-line"}`}
+                />
+              )}
               <button
                 type="button"
                 disabled={!reachable}
                 onClick={() => goToStep(s as Step)}
-                className={`flex items-center gap-2 transition-colors ${
-                  step === s ? "font-bold text-onsen" : reachable ? "text-bark-soft hover:text-onsen cursor-pointer" : "text-bark-soft/40 cursor-not-allowed"
+                className={`flex min-h-[40px] items-center gap-2 rounded-pill px-2.5 transition-colors ${
+                  active
+                    ? "font-bold text-pine"
+                    : reachable
+                      ? "cursor-pointer text-bark-soft hover:text-clay"
+                      : "cursor-not-allowed text-bark-soft/40"
                 }`}
               >
-                <span className={`w-6 h-6 rounded-full grid place-items-center text-xs ${step === s ? "bg-onsen text-white" : "bg-cream-2"}`}>{s}</span>
-                {s === 1 ? "지역" : s === 2 ? "사우나 고르기" : "부가 옵션"}
+                <span
+                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-pill text-xs font-bold transition-all ${
+                    active
+                      ? "bg-pine text-white shadow-pine"
+                      : reachable
+                        ? "bg-clay-soft text-clay-deep"
+                        : "bg-cream-2 text-bark-soft/50"
+                  }`}
+                >
+                  {s}
+                </span>
+                <span className="hidden whitespace-nowrap sm:inline">
+                  {s === 1 ? "지역" : s === 2 ? "사우나 고르기" : "부가 옵션"}
+                </span>
               </button>
             </li>
           );
@@ -199,9 +222,9 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
       {step === 1 && (
         <section className="card glass p-5 md:p-6 space-y-5 animate-fade-up">
           <div>
-            <h2 className="font-bold mb-3">지역</h2>
+            <h3 className="mb-3 font-serif text-lg font-bold text-pine">지역</h3>
             <select
-              className="w-full border border-onsen/20 rounded-btn p-3 min-h-[44px] bg-white focus:border-onsen focus:ring-2 focus:ring-onsen/20 outline-none transition"
+              className="field"
               value={region}
               onChange={(e) => onRegionChange(e.target.value as PlannerInput["region"])}
               aria-label="지역 선택"
@@ -213,12 +236,12 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
           </div>
 
           <div>
-            <h2 className="font-bold mb-3">세부 지역 (시군구)</h2>
+            <h3 className="mb-3 font-serif text-lg font-bold text-pine">세부 지역 (시군구)</h3>
             <div className="flex gap-1 mb-3 text-sm">
               <button
                 type="button"
                 onClick={() => setMapMode("dropdown")}
-                className={`flex-1 min-h-[40px] rounded-btn border transition-all ${mapMode === "dropdown" ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
+                className="seg flex-1"
                 aria-pressed={mapMode === "dropdown"}
               >
                 드롭다운에서 선택
@@ -226,7 +249,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
               <button
                 type="button"
                 onClick={() => setMapMode("nationwide")}
-                className={`flex-1 min-h-[40px] rounded-btn border transition-all ${mapMode === "nationwide" ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
+                className="seg flex-1"
                 aria-pressed={mapMode === "nationwide"}
               >
                 지도에서 직접 선택
@@ -236,7 +259,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
             {mapMode === "dropdown" ? (
               <select
                 name="sigungu"
-                className="w-full border border-onsen/20 rounded-btn p-3 min-h-[44px] bg-white focus:border-onsen focus:ring-2 focus:ring-onsen/20 outline-none transition"
+                className="field"
                 value={sigungu ?? ""}
                 onChange={(e) => {
                   const id = e.target.value;
@@ -263,8 +286,8 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
             )}
 
             {sigungu && (
-              <div className="mt-3 p-3 bg-onsen/5 border border-onsen/20 rounded-lg">
-                <p className="text-xs font-semibold text-onsen mb-2">
+              <div className="mt-3 rounded-[14px] border border-clay/20 bg-clay-soft/45 p-3">
+                <p className="mb-2 text-xs font-bold text-clay-deep">
                   {getSigungus(region).find((s) => s.id === sigungu)?.fullName ?? "선택된 세부 지역"} 실시간 사우나
                 </p>
                 {livePreviewLoading ? (
@@ -283,12 +306,12 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
           </div>
 
           <div>
-            <h2 className="font-bold mb-3">여행 모드</h2>
+            <h3 className="mb-3 font-serif text-lg font-bold text-pine">여행 모드</h3>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setOnsenFocus(false)}
-                className={`flex-1 min-h-[44px] rounded-btn border transition-all ${!onsenFocus ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
+                className="seg flex-1"
                 aria-pressed={!onsenFocus}
               >
                 일반 (사우나/온천 혼합)
@@ -296,14 +319,14 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
               <button
                 type="button"
                 onClick={() => setOnsenFocus(true)}
-                className={`flex-1 min-h-[44px] rounded-btn border transition-all ${onsenFocus ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
+                className="seg flex-1"
                 aria-pressed={onsenFocus}
               >
                 ♨ 온천 중심
               </button>
             </div>
             {regionData?.onsenDistrict && (
-              <p className="text-xs text-onsen mt-2">이 지역은 온천 지구예요 — 온천 중심 모드를 추천해요.</p>
+              <p className="mt-2 text-xs font-semibold text-clay">이 지역은 온천 지구예요 — 온천 중심 모드를 추천해요.</p>
             )}
           </div>
           <button className="btn-primary w-full" onClick={() => goToStep(2)}>
@@ -315,9 +338,9 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
       {step === 2 && (
         <section className="card glass p-5 md:p-6 space-y-4 animate-fade-up">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold">사우나·온천 지도 ({regionData?.name})</h2>
+            <h3 className="font-serif text-lg font-bold text-pine">사우나·온천 지도 ({regionData?.name})</h3>
             {anchorSauna && (
-              <span className="text-xs bg-onsen/10 text-onsen px-2 py-1 rounded-full">
+              <span className="rounded-pill bg-pine px-2.5 py-1 text-xs font-bold text-white">
                 선택: {anchorSauna.name}
               </span>
             )}
@@ -342,19 +365,19 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
       {step === 3 && (
         <section className="card glass p-5 md:p-6 space-y-5 animate-fade-up">
           {anchorSauna && (
-            <div className="text-sm bg-onsen/10 text-onsen rounded-lg p-3">
+            <div className="rounded-[14px] border border-clay/20 bg-clay-soft/50 p-3 text-sm text-clay-deep">
               🎯 중심: <b>{anchorSauna.name}</b> — 이 사우나를 축으로 코스를 짜요.
             </div>
           )}
           <div>
-            <h2 className="font-bold mb-3">기간</h2>
+            <h3 className="mb-3 font-serif text-lg font-bold text-pine">기간</h3>
             <div className="flex gap-2">
               {[1, 2, 3, 4].map((d) => (
                 <button
                   key={d}
                   type="button"
                   onClick={() => setDays(d)}
-                  className={`flex-1 min-h-[44px] rounded-btn border transition-all ${days === d ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
+                  className="seg flex-1"
                   aria-pressed={days === d}
                 >
                   {d}일
@@ -363,14 +386,14 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
             </div>
           </div>
           <div>
-            <h2 className="font-bold mb-3">취향 (복수 선택)</h2>
+            <h3 className="mb-3 font-serif text-lg font-bold text-pine">취향 (복수 선택)</h3>
             <div className="flex flex-wrap gap-2">
               {PREFS.map((p) => (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => togglePref(p.id)}
-                  className={`px-3 py-2 rounded-full border text-sm transition-all ${prefs.includes(p.id) ? "bg-onsen-gradient text-white border-transparent shadow-cta" : "border-onsen/30 text-onsen bg-white hover:bg-onsen-soft"}`}
+                  className="seg"
                   aria-pressed={prefs.includes(p.id)}
                 >
                   {p.label}
@@ -379,20 +402,21 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
             </div>
           </div>
           <div>
-            <h2 className="font-bold mb-3">숙소 추천</h2>
-            <label className="flex items-center gap-2 text-sm">
+            <h3 className="mb-3 font-serif text-lg font-bold text-pine">숙소 추천</h3>
+            <label className="flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-[14px] border border-line bg-paper px-4 text-sm text-bark">
               <input
                 type="checkbox"
                 checked={includeLodging}
                 onChange={(e) => setIncludeLodging(e.target.checked)}
+                className="h-4 w-4 accent-[#234034]"
               />
               온천·사우나를 갖춘 숙소도 코스에 포함
             </label>
           </div>
           <div>
-            <h2 className="font-bold mb-3">특이사항</h2>
+            <h3 className="mb-3 font-serif text-lg font-bold text-pine">특이사항</h3>
             <textarea
-              className="w-full border border-onsen/20 rounded-btn p-3 min-h-[64px] bg-white focus:border-onsen focus:ring-2 focus:ring-onsen/20 outline-none transition resize-none"
+              className="field min-h-[72px] resize-none"
               placeholder="예: 겨울 방문, 차 없음, 아이 동반"
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 500))}
@@ -409,8 +433,8 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
       )}
 
       {error && (
-        <div className="card p-4 text-center space-y-3" role="alert">
-          <p className="text-red-600 text-sm">⚠️ 잠시 문제가 생겼어요: {error}</p>
+        <div className="card space-y-3 p-4 text-center" role="alert">
+          <p className="text-sm font-semibold text-clay-deep">⚠️ 잠시 문제가 생겼어요: {error}</p>
           <button type="button" onClick={submit} className="btn-secondary">
             ↺ 다시 시도
           </button>
@@ -421,40 +445,42 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
 
     {/* 데스크탑 전용 — 지금까지 고른 내용을 스크롤 없이 항상 확인할 수 있는 요약 패널 */}
     <aside className="hidden lg:block sticky top-8">
-      <div className="card glass p-5 space-y-4">
-        <h2 className="text-xs font-bold text-bark-soft tracking-wide">🧖 선택 요약</h2>
+      <div className="card space-y-4 bg-pine-gradient p-5 text-white shadow-pine">
+        <h3 className="text-[10px] font-extrabold uppercase tracking-eyebrow text-ember">
+          선택 요약
+        </h3>
         <dl className="space-y-3 text-sm">
           <div>
-            <dt className="text-xs text-bark-soft mb-0.5">지역</dt>
-            <dd className="font-medium text-bark">
+            <dt className="mb-0.5 text-xs text-white/50">지역</dt>
+            <dd className="font-semibold text-[#FFFCF6]">
               {REGION_LABELS[region]}{sigunguLabel ? ` · ${sigunguLabel}` : ""}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-bark-soft mb-0.5">사우나</dt>
-            <dd className="font-medium text-bark">{anchorSauna ? anchorSauna.name : "미선택 (AI 추천)"}</dd>
+            <dt className="mb-0.5 text-xs text-white/50">사우나</dt>
+            <dd className="font-semibold text-[#FFFCF6]">{anchorSauna ? anchorSauna.name : "미선택 (AI 추천)"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-bark-soft mb-0.5">여행 모드</dt>
-            <dd className="font-medium text-bark">{onsenFocus ? "♨ 온천 중심" : "🛁 일반"}</dd>
+            <dt className="mb-0.5 text-xs text-white/50">여행 모드</dt>
+            <dd className="font-semibold text-[#FFFCF6]">{onsenFocus ? "♨ 온천 중심" : "🛁 일반"}</dd>
           </div>
           <div>
-            <dt className="text-xs text-bark-soft mb-0.5">기간</dt>
-            <dd className="font-medium text-bark">{days}일</dd>
+            <dt className="mb-0.5 text-xs text-white/50">기간</dt>
+            <dd className="font-semibold text-[#FFFCF6]">{days}일</dd>
           </div>
           <div>
-            <dt className="text-xs text-bark-soft mb-0.5">취향</dt>
-            <dd className="font-medium text-bark">
+            <dt className="mb-0.5 text-xs text-white/50">취향</dt>
+            <dd className="font-semibold text-[#FFFCF6]">
               {prefs.length ? prefs.map((p) => PREFS.find((x) => x.id === p)?.label).join(", ") : "미선택"}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-bark-soft mb-0.5">숙소 추천</dt>
-            <dd className="font-medium text-bark">{includeLodging ? "포함" : "미포함"}</dd>
+            <dt className="mb-0.5 text-xs text-white/50">숙소 추천</dt>
+            <dd className="font-semibold text-[#FFFCF6]">{includeLodging ? "포함" : "미포함"}</dd>
           </div>
         </dl>
         {maxStepReached > step && (
-          <button type="button" onClick={() => goToStep((step + 1) as Step)} className="btn-ghost text-xs w-full justify-center border border-onsen/20">
+          <button type="button" onClick={() => goToStep((step + 1) as Step)} className="w-full justify-center rounded-pill border border-white/25 bg-white/10 py-2 text-xs font-bold text-white transition hover:bg-white/20">
             다음 단계로 이동 →
           </button>
         )}

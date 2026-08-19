@@ -1,5 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
+
+// 제목 계열에만 쓰는 명조 — 온기행 톤의 중심.
+// preload를 끄면 subsets 지정 없이도 한글 유니코드 레인지가 모두 포함되며,
+// 빌드 시 자체 호스팅되므로 런타임에 외부 요청이 나가지 않는다.
+const notoSerifKr = Noto_Serif_KR({
+  preload: false,
+  display: "swap",
+  variable: "--font-serif-kr",
+  fallback: ["Nanum Myeongjo", "Batang", "serif"],
+});
 
 const siteUrl = "https://sauna-travel-planner.vercel.app";
 const description =
@@ -23,12 +34,13 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#E8743B",
+  // 히어로가 딥그린으로 시작하므로 브라우저 크롬도 같은 색으로 맞춘다
+  themeColor: "#16291F",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={notoSerifKr.variable}>
       <body>{children}</body>
     </html>
   );

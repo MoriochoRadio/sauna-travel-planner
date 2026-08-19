@@ -176,7 +176,7 @@ export function RegionMapPicker({
       </p>
       <div
         ref={ref}
-        className="w-full h-72 rounded-card border border-onsen/20 z-0"
+        className="z-0 h-72 w-full rounded-card border border-line"
         aria-label="세부 지역 선택 지도"
       />
     </div>

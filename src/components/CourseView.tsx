@@ -44,13 +44,24 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
   return (
     <section className="card glass p-5 md:p-6 mt-6 animate-fade-up">
       {/* 헤더 밴드 */}
-      <div className="-mx-5 -mt-5 md:-mx-6 md:-mt-6 mb-5 px-5 md:px-6 py-4 rounded-t-card bg-onsen-gradient text-white">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg md:text-xl font-extrabold drop-shadow-sm">
-            {regionLabel} · {course.days.length}일 코스
-          </h2>
+      <div className="relative -mx-5 -mt-5 mb-5 overflow-hidden rounded-t-card bg-pine-gradient px-5 py-5 text-white md:-mx-6 md:-mt-6 md:px-6">
+        {/* 헤더 안쪽에서 번지는 파문 */}
+        <svg aria-hidden viewBox="0 0 240 240" className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 opacity-30">
+          <circle className="ripple-ring" style={{ ["--ripple-opacity" as string]: 0.6 }} cx="120" cy="120" r="46" fill="none" stroke="#E08A57" strokeWidth="1.5" />
+          <circle className="ripple-ring" style={{ ["--ripple-opacity" as string]: 0.4, animationDelay: "1.6s" }} cx="120" cy="120" r="82" fill="none" stroke="#7FA893" strokeWidth="1.25" />
+          <circle className="ripple-ring" style={{ ["--ripple-opacity" as string]: 0.26, animationDelay: "3.2s" }} cx="120" cy="120" r="116" fill="none" stroke="#E08A57" strokeWidth="1" />
+        </svg>
+        <div className="relative flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-eyebrow text-ember">
+              Your course
+            </p>
+            <h3 className="mt-1.5 font-serif text-xl font-bold tracking-[-0.03em] md:text-2xl">
+              {regionLabel} · {course.days.length}일 코스
+            </h3>
+          </div>
           <button
-            className="text-sm font-semibold bg-white/25 hover:bg-white/35 rounded-full px-3 py-1.5 transition disabled:opacity-60"
+            className="shrink-0 rounded-pill border border-white/25 bg-white/15 px-3.5 py-2 text-sm font-bold transition hover:bg-white/25 disabled:opacity-60"
             onClick={onRetry}
             disabled={loading}
           >
@@ -60,33 +71,35 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
       </div>
 
       {course.usedFallback && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+        <p className="mb-3 rounded-[12px] border border-clay/25 bg-clay-soft/60 px-3 py-2 text-xs font-semibold text-clay-deep">
           ⚠ AI 생성 실패로 기본 코스를 표시합니다.
         </p>
       )}
 
-      <p className="text-sm text-bark-soft mb-5 leading-relaxed">💡 {course.summary}</p>
+      <p className="mb-6 rounded-[14px] border border-line bg-cream/60 px-4 py-3 text-sm leading-[1.8] text-bark-soft">
+        💡 {course.summary}
+      </p>
 
       <div className="space-y-6">
         {course.days.map((d) => (
           <div key={d.day}>
-            <h3 className="font-bold text-bark mb-3 flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-onsen-soft text-onsen text-sm font-extrabold">
+            <h4 className="mb-3 flex items-center gap-2 font-bold text-bark">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-pill bg-pine text-sm font-extrabold text-white">
                 {d.day}
               </span>
-              <span className="text-base">{d.theme}</span>
-            </h3>
+              <span className="font-serif text-lg tracking-[-0.02em] text-pine">{d.theme}</span>
+            </h4>
 
-            <ol className="relative border-l-2 border-onsen/25 ml-3 space-y-4">
+            <ol className="relative ml-3 space-y-4 border-l-2 border-dashed border-clay/30">
               {d.stops.map((s, i) => {
                 const place = resolvePlace(s);
                 return (
                   <li key={i} className="relative pl-5">
                     {/* 타임라인 노드 */}
-                    <span className="absolute -left-[9px] top-2.5 w-4 h-4 rounded-full bg-onsen-gradient border-2 border-white shadow-cta" />
-                    <div className="rounded-card bg-white/80 border border-onsen/10 p-3 hover:shadow-card-hover transition-shadow">
+                    <span className="absolute -left-[9px] top-3 h-4 w-4 rounded-pill bg-onsen-gradient ring-4 ring-paper" />
+                    <div className="rounded-card border border-line/80 bg-paper p-3.5 transition-shadow hover:shadow-card-hover">
                       <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="font-mono text-sm font-bold text-onsen">{s.time}</span>
+                        <span className="font-mono text-sm font-bold text-clay">{s.time}</span>
                         <span className="text-lg mr-1">{place ? typeIcon(place.type) : "📍"}</span>
                         <a
                           href={place ? kakaoMapUrl(place) : `https://map.kakao.com/?q=${encodeURIComponent(s.title)}`}
@@ -103,20 +116,20 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                         <div className="flex flex-wrap items-center gap-1.5 mt-2">
                           {typeof place.rating === "number" && (
                             <span
-                              className="inline-flex items-center gap-0.5 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700"
+                              className="inline-flex items-center gap-0.5 rounded-pill bg-clay-soft px-2 py-0.5 text-xs font-bold text-clay-deep"
                               title="추천지수 (자체 산출)"
                             >
                               ★ {place.rating.toFixed(1)}
                             </span>
                           )}
                           {place.hasOnsen && (
-                            <span className="rounded-md bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">♨ 온천</span>
+                            <span className="rounded-pill bg-clay/12 px-2 py-0.5 text-xs font-semibold text-clay-deep">♨ 온천</span>
                           )}
                           {place.hasSauna && (
-                            <span className="rounded-md bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">🧖 사우나</span>
+                            <span className="rounded-pill bg-sage/20 px-2 py-0.5 text-xs font-semibold text-pine">🧖 사우나</span>
                           )}
                           {place.type === "lodging" && (
-                            <span className="rounded-md bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700">🏨 숙소</span>
+                            <span className="rounded-pill bg-pine/12 px-2 py-0.5 text-xs font-semibold text-pine">🏨 숙소</span>
                           )}
                           {place.tel && <span className="text-xs text-bark-soft">☎ {place.tel}</span>}
                           {place.address && <span className="text-xs text-bark-soft">📍 {place.address}</span>}
@@ -146,13 +159,13 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                       {/* 공식 출처를 직접 확인한 장소는 검증 상태와 확인 날짜를 함께 보여준다.
                           운영 시간·요금은 자주 바뀌므로 여기서 단정하지 않고 출처로 넘긴다. */}
                       {place?.verification && (
-                        <div className="mt-2 rounded-md border border-onsen/15 bg-onsen-soft/50 px-2.5 py-2">
+                        <div className="mt-2 rounded-[12px] border border-line bg-cream/70 px-2.5 py-2">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span
                               className={
                                 place.verification.status === "official"
-                                  ? "rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700"
-                                  : "rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600"
+                                  ? "rounded-pill bg-sage/25 px-2 py-0.5 text-xs font-bold text-pine"
+                                  : "rounded-pill bg-cream-2 px-2 py-0.5 text-xs font-bold text-bark-soft"
                               }
                             >
                               {place.verification.status === "official" ? "✓ 공식 확인" : "· 확인 중"}
@@ -216,9 +229,9 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
         ))}
       </div>
 
-      <div className="mt-5 flex items-center justify-between rounded-card bg-onsen-soft px-4 py-3">
-        <span className="text-sm text-bark-soft">예상 비용</span>
-        <span className="text-base font-extrabold text-onsen-deep">
+      <div className="mt-6 flex items-center justify-between rounded-card border border-clay/20 bg-clay-soft/60 px-5 py-4">
+        <span className="text-xs font-bold uppercase tracking-eyebrow text-clay">예상 비용</span>
+        <span className="font-serif text-xl font-bold text-clay-deep">
           약 {course.estCostKrw.toLocaleString()}원
         </span>
       </div>

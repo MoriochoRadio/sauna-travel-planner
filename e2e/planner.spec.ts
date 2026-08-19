@@ -117,7 +117,7 @@ test("2일차 여행 코스에 숙소(🏨)가 자동 포함된다", async ({ pa
   await page.getByRole("button", { name: "2일", exact: true }).click();
   await page.getByRole("button", { name: "코스 만들기" }).click();
 
-  await expect(page.locator("h2").first()).toHaveText(/강원.*2일 코스/, { timeout: 20000 });
+  await expect(page.getByRole("heading", { name: /강원.*2일 코스/ })).toBeVisible({ timeout: 20000 });
   // 숙소 배지(🏨)가 코스 내 적어도 1곳에 표시된다
   await expect(page.getByText("🏨 숙소", { exact: true }).first()).toBeVisible({ timeout: 10000 });
 });

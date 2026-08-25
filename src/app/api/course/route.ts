@@ -3,9 +3,6 @@ import { PlannerInputSchema } from "@/data/schema";
 import { generateCourse } from "@/ai/engine";
 import { rateLimit, clientIp } from "../rate-limit";
 
-// 전체 응답 하드 타임아웃 (무료 모델 레이트리밋 시 폴백으로 신속 전환)
-const HARD_TIMEOUT_MS = 10000;
-
 export async function POST(req: NextRequest) {
   // CI/테스트 환경에서는 rate-limit 비활성화 (E2E 다중 요청 차단 방지)
   if (!process.env.CI && !rateLimit(clientIp(req))) {
@@ -23,48 +20,22 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.path[0];
     const code =
-      first === "region" ? "invalid_region"
-      : first === "days" ? "invalid_days"
-      : first === "preferences" ? "invalid_preference"
-      : "invalid_input";
+      first === "region"
+        ? "invalid_region"
+        : first === "days"
+          ? "invalid_days"
+          : first === "preferences"
+            ? "invalid_preference"
+            : "invalid_input";
     return NextResponse.json({ error: code }, { status: 400 });
   }
 
-  // 키가 없거나 CI 환경(rate-limit 불확실)에서는 LLM 호출을 건너뛰고
-  // 즉시 폴백 코스로 응답 — 10초 타임아웃 낭비 방지 + E2E 결정론적 수행
-  const useLLM = !!process.env.OPENROUTER_API_KEY && !process.env.CI;
-  if (!useLLM) {
-    try {
-      const { fallbackCourse } = await import("@/ai/fallback");
-      const { getRegion } = await import("@/data/seed");
-      const region = getRegion(parsed.data.region);
-      if (!region) return NextResponse.json({ error: "unknown_region" }, { status: 400 });
-      const fb = fallbackCourse(parsed.data, region);
-      return NextResponse.json({ ...fb, usedFallback: true, places: region.places });
-    } catch {
-      return NextResponse.json({ error: "generation_failed" }, { status: 500 });
-    }
-  }
-
-  // 타임아웃 시 폴백 코스로 즉시 응답
-  const timeout = new Promise<null>((_, reject) =>
-    setTimeout(() => reject(new Error("timeout")), HARD_TIMEOUT_MS)
-  );
-
+  // LLM 호출을 없애면서 하드 타임아웃과 이중 폴백 분기도 함께 걷어냈다.
+  // 코스는 손수 짠 것 아니면 규칙 기반이며, 둘 다 즉시 계산된다.
   try {
-    const course = await Promise.race([generateCourse(parsed.data), timeout]);
-    if (!course) throw new Error("empty");
+    const course = await generateCourse(parsed.data);
     return NextResponse.json(course);
   } catch {
-    try {
-      const { fallbackCourse } = await import("@/ai/fallback");
-      const { getRegion } = await import("@/data/seed");
-      const region = getRegion(parsed.data.region);
-      if (!region) return NextResponse.json({ error: "unknown_region" }, { status: 400 });
-      const fb = fallbackCourse(parsed.data, region);
-      return NextResponse.json({ ...fb, usedFallback: true, places: region.places });
-    } catch {
-      return NextResponse.json({ error: "generation_failed" }, { status: 500 });
-    }
+    return NextResponse.json({ error: "generation_failed" }, { status: 500 });
   }
 }

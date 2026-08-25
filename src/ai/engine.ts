@@ -5,7 +5,7 @@ import { searchKakaoSauna, searchKakaoLodging, kakaoToPlace } from "@/lib/kakao"
 import { searchSaunaPlaces, toSaunaPlace } from "@/lib/tourapi";
 import { computeRating } from "@/lib/rating";
 import { CourseSchema, type CourseResult } from "./course.schema";
-import { generateWithLLM } from "./generate";
+import { findCuratedCourse } from "@/data/curatedCourses";
 import { fallbackCourse } from "./fallback";
 
 // 카카오/tourAPI 실시간 결과와 curated seed에 같은 장소가 다른 id로 중복 등록되는 것을 방지
@@ -17,7 +17,11 @@ function dedupeByName(primary: Place[], secondary: Place[]): Place[] {
   return secondary.filter((p) => !seenNames.has(normalizeName(p.name)));
 }
 
-// 엔진 오케스트레이션: LLM 우선, 실패 시 폴백
+// 엔진 오케스트레이션: 손수 짠 코스 우선, 없으면 규칙 기반 생성
+//
+// 이전에는 LLM으로 코스를 만들고 실패하면 규칙 기반으로 넘어갔다. 실제로는
+// 키가 없어 늘 규칙 기반으로 돌면서 화면에는 "AI 생성 실패"라고 표시됐다.
+// 매번 달라지는 생성 결과보다 검증한 장소로 미리 짜 둔 코스가 품질이 일정하다.
 export async function generateCourse(input: PlannerInput): Promise<CourseResult> {
   const region = getRegion(input.region);
   if (!region) {
@@ -69,12 +73,12 @@ export async function generateCourse(input: PlannerInput): Promise<CourseResult>
     }
   }
 
-  const llm = await generateWithLLM(input, regionData);
-  if (llm) {
-    const validated = CourseSchema.parse(llm);
-    return { ...validated, usedFallback: false, places: regionData.places };
+  const curated = findCuratedCourse(input);
+  if (curated) {
+    const validated = CourseSchema.parse(curated);
+    return { ...validated, curated: true, places: regionData.places };
   }
 
   const fb = fallbackCourse(input, regionData);
-  return { ...fb, usedFallback: true, places: regionData.places };
+  return { ...fb, curated: false, places: regionData.places };
 }

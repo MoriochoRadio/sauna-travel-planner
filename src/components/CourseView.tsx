@@ -24,7 +24,15 @@ function typeIcon(t: Place["type"]): string {
   return "🧖";
 }
 
-export function CourseView({ course, onRetry, loading }: { course: Course; onRetry: () => void; loading: boolean }) {
+export function CourseView({
+  course,
+  onRetry,
+  loading,
+}: {
+  course: Course;
+  onRetry: () => void;
+  loading: boolean;
+}) {
   // 장소 상세 매핑: 응답에 실린 places(live+curated 병합) 우선, 부족하면 정적 region으로 보강
   const placeById = new Map<string, Place>();
   const placeByName = new Map<string, Place>();
@@ -36,20 +44,62 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
   const regionData = getRegion(course.region as any);
   regionData?.places.forEach(addPlace);
 
-  const resolvePlace = (s: { placeId?: string; title: string }): Place | undefined =>
-    (s.placeId ? placeById.get(s.placeId) : undefined) ?? placeByName.get(s.title);
+  const resolvePlace = (s: {
+    placeId?: string;
+    title: string;
+  }): Place | undefined =>
+    (s.placeId ? placeById.get(s.placeId) : undefined) ??
+    placeByName.get(s.title);
 
-  const regionLabel = REGION_LABELS[course.region as keyof typeof REGION_LABELS] ?? course.region;
+  const regionLabel =
+    REGION_LABELS[course.region as keyof typeof REGION_LABELS] ?? course.region;
 
   return (
     <section className="card glass p-5 md:p-6 mt-6 animate-fade-up">
       {/* 헤더 밴드 */}
       <div className="relative -mx-5 -mt-5 mb-5 overflow-hidden rounded-t-card bg-pine-gradient px-5 py-5 text-white md:-mx-6 md:-mt-6 md:px-6">
         {/* 헤더 안쪽에서 번지는 파문 */}
-        <svg aria-hidden viewBox="0 0 240 240" className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 opacity-30">
-          <circle className="ripple-ring" style={{ ["--ripple-opacity" as string]: 0.6 }} cx="120" cy="120" r="46" fill="none" stroke="#E08A57" strokeWidth="1.5" />
-          <circle className="ripple-ring" style={{ ["--ripple-opacity" as string]: 0.4, animationDelay: "1.6s" }} cx="120" cy="120" r="82" fill="none" stroke="#7FA893" strokeWidth="1.25" />
-          <circle className="ripple-ring" style={{ ["--ripple-opacity" as string]: 0.26, animationDelay: "3.2s" }} cx="120" cy="120" r="116" fill="none" stroke="#E08A57" strokeWidth="1" />
+        <svg
+          aria-hidden
+          viewBox="0 0 240 240"
+          className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 opacity-30"
+        >
+          <circle
+            className="ripple-ring"
+            style={{ ["--ripple-opacity" as string]: 0.6 }}
+            cx="120"
+            cy="120"
+            r="46"
+            fill="none"
+            stroke="#E08A57"
+            strokeWidth="1.5"
+          />
+          <circle
+            className="ripple-ring"
+            style={{
+              ["--ripple-opacity" as string]: 0.4,
+              animationDelay: "1.6s",
+            }}
+            cx="120"
+            cy="120"
+            r="82"
+            fill="none"
+            stroke="#7FA893"
+            strokeWidth="1.25"
+          />
+          <circle
+            className="ripple-ring"
+            style={{
+              ["--ripple-opacity" as string]: 0.26,
+              animationDelay: "3.2s",
+            }}
+            cx="120"
+            cy="120"
+            r="116"
+            fill="none"
+            stroke="#E08A57"
+            strokeWidth="1"
+          />
         </svg>
         <div className="relative flex items-center justify-between gap-3">
           <div>
@@ -70,9 +120,13 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
         </div>
       </div>
 
-      {course.usedFallback && (
-        <p className="mb-3 rounded-[12px] border border-clay/25 bg-clay-soft/60 px-3 py-2 text-xs font-semibold text-clay-deep">
-          ⚠ AI 생성 실패로 기본 코스를 표시합니다.
+      {course.curated ? (
+        <p className="text-xs text-onsen bg-onsen-soft border border-onsen/20 rounded-lg px-3 py-2 mb-3">
+          ✓ 검증한 장소로 직접 짠 추천 코스입니다.
+        </p>
+      ) : (
+        <p className="text-xs text-bark-soft bg-white/70 border border-onsen/10 rounded-lg px-3 py-2 mb-3">
+          입력한 지역·기간·취향에 맞춰 자동 구성한 코스입니다.
         </p>
       )}
 
@@ -87,7 +141,9 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-pill bg-pine text-sm font-extrabold text-white">
                 {d.day}
               </span>
-              <span className="font-serif text-lg tracking-[-0.02em] text-pine">{d.theme}</span>
+              <span className="font-serif text-lg tracking-[-0.02em] text-pine">
+                {d.theme}
+              </span>
             </h4>
 
             <ol className="relative ml-3 space-y-4 border-l-2 border-dashed border-clay/30">
@@ -99,10 +155,18 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                     <span className="absolute -left-[9px] top-3 h-4 w-4 rounded-pill bg-onsen-gradient ring-4 ring-paper" />
                     <div className="rounded-card border border-line/80 bg-paper p-3.5 transition-shadow hover:shadow-card-hover">
                       <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="font-mono text-sm font-bold text-clay">{s.time}</span>
-                        <span className="text-lg mr-1">{place ? typeIcon(place.type) : "📍"}</span>
+                        <span className="font-mono text-sm font-bold text-clay">
+                          {s.time}
+                        </span>
+                        <span className="text-lg mr-1">
+                          {place ? typeIcon(place.type) : "📍"}
+                        </span>
                         <a
-                          href={place ? kakaoMapUrl(place) : `https://map.kakao.com/?q=${encodeURIComponent(s.title)}`}
+                          href={
+                            place
+                              ? kakaoMapUrl(place)
+                              : `https://map.kakao.com/?q=${encodeURIComponent(s.title)}`
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex min-h-[24px] items-center font-semibold text-bark underline decoration-onsen/40 hover:decoration-onsen"
@@ -110,7 +174,9 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                           {s.title}
                         </a>
                       </div>
-                      <div className="text-xs text-bark-soft mt-1 leading-relaxed">{s.reason}</div>
+                      <div className="text-xs text-bark-soft mt-1 leading-relaxed">
+                        {s.reason}
+                      </div>
 
                       {place && (
                         <div className="flex flex-wrap items-center gap-1.5 mt-2">
@@ -123,16 +189,30 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                             </span>
                           )}
                           {place.hasOnsen && (
-                            <span className="rounded-pill bg-clay/12 px-2 py-0.5 text-xs font-semibold text-clay-deep">♨ 온천</span>
+                            <span className="rounded-pill bg-clay/12 px-2 py-0.5 text-xs font-semibold text-clay-deep">
+                              ♨ 온천
+                            </span>
                           )}
                           {place.hasSauna && (
-                            <span className="rounded-pill bg-sage/20 px-2 py-0.5 text-xs font-semibold text-pine">🧖 사우나</span>
+                            <span className="rounded-pill bg-sage/20 px-2 py-0.5 text-xs font-semibold text-pine">
+                              🧖 사우나
+                            </span>
                           )}
                           {place.type === "lodging" && (
-                            <span className="rounded-pill bg-pine/12 px-2 py-0.5 text-xs font-semibold text-pine">🏨 숙소</span>
+                            <span className="rounded-pill bg-pine/12 px-2 py-0.5 text-xs font-semibold text-pine">
+                              🏨 숙소
+                            </span>
                           )}
-                          {place.tel && <span className="text-xs text-bark-soft">☎ {place.tel}</span>}
-                          {place.address && <span className="text-xs text-bark-soft">📍 {place.address}</span>}
+                          {place.tel && (
+                            <span className="text-xs text-bark-soft">
+                              ☎ {place.tel}
+                            </span>
+                          )}
+                          {place.address && (
+                            <span className="text-xs text-bark-soft">
+                              📍 {place.address}
+                            </span>
+                          )}
                           <a
                             href={kakaoMapUrl(place)}
                             target="_blank"
@@ -153,7 +233,9 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                       )}
 
                       {s.tip && (
-                        <div className="text-xs text-steam font-medium mt-1.5">💧 {s.tip}</div>
+                        <div className="text-xs text-steam font-medium mt-1.5">
+                          💧 {s.tip}
+                        </div>
                       )}
 
                       {/* 공식 출처를 직접 확인한 장소는 검증 상태와 확인 날짜를 함께 보여준다.
@@ -168,11 +250,18 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                                   : "rounded-pill bg-cream-2 px-2 py-0.5 text-xs font-bold text-bark-soft"
                               }
                             >
-                              {place.verification.status === "official" ? "✓ 공식 확인" : "· 확인 중"}
+                              {place.verification.status === "official"
+                                ? "✓ 공식 확인"
+                                : "· 확인 중"}
                             </span>
-                            <span className="text-xs text-bark-soft">{place.verification.verifiedAt} 기준</span>
+                            <span className="text-xs text-bark-soft">
+                              {place.verification.verifiedAt} 기준
+                            </span>
                             <a
-                              href={place.verification.officialUrl ?? place.verification.sourceUrl}
+                              href={
+                                place.verification.officialUrl ??
+                                place.verification.sourceUrl
+                              }
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex min-h-[24px] items-center py-0.5 text-xs text-onsen font-medium underline decoration-onsen/40 hover:decoration-onsen"
@@ -189,14 +278,21 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                       )}
 
                       {place?.usageTip && (
-                        <div className="mt-1.5 text-xs text-bark-soft leading-relaxed">🧭 {place.usageTip}</div>
+                        <div className="mt-1.5 text-xs text-bark-soft leading-relaxed">
+                          🧭 {place.usageTip}
+                        </div>
                       )}
 
                       {place?.neighborhood && place.neighborhood.length > 0 && (
                         <ul className="mt-1.5 space-y-0.5">
                           {place.neighborhood.map((n) => (
-                            <li key={n.title} className="text-xs text-bark-soft leading-relaxed">
-                              {n.type === "food" ? "🍜" : "🏞"} <b className="text-bark">{n.title}</b> — {n.description}
+                            <li
+                              key={n.title}
+                              className="text-xs text-bark-soft leading-relaxed"
+                            >
+                              {n.type === "food" ? "🍜" : "🏞"}{" "}
+                              <b className="text-bark">{n.title}</b> —{" "}
+                              {n.description}
                             </li>
                           ))}
                         </ul>
@@ -208,7 +304,10 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
                             🔬 {place.science.title}
                           </summary>
                           <p className="mt-1 text-xs text-bark-soft leading-relaxed">
-                            <span className="font-semibold">{place.science.studyType}</span> · {place.science.summary}{" "}
+                            <span className="font-semibold">
+                              {place.science.studyType}
+                            </span>{" "}
+                            · {place.science.summary}{" "}
                             <a
                               href={place.science.sourceUrl}
                               target="_blank"
@@ -230,7 +329,9 @@ export function CourseView({ course, onRetry, loading }: { course: Course; onRet
       </div>
 
       <div className="mt-6 flex items-center justify-between rounded-card border border-clay/20 bg-clay-soft/60 px-5 py-4">
-        <span className="text-xs font-bold uppercase tracking-eyebrow text-clay">예상 비용</span>
+        <span className="text-xs font-bold uppercase tracking-eyebrow text-clay">
+          예상 비용
+        </span>
         <span className="font-serif text-xl font-bold text-clay-deep">
           약 {course.estCostKrw.toLocaleString()}원
         </span>

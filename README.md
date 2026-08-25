@@ -14,7 +14,7 @@
 - **실시간 카카오 로컬 검색**: 선택 시군구 반경 10km 내 사우나/찜질방/온천/숙소를 실시간 조회 (키 필요, 무료)
 - **온천·사우나 보유 숙소 자동 포함**: 2일차 이상이거나 숙소 옵션 켜면, 코스 마지막에 숙소를 자동 배치 (매일 다른 숙소)
 - **추천지수(rating)**: 카카오는 리뷰/평점을 제공하지 않아, 가격대·온천보유·태그·정보완성도 기반 자체 산출 지표로 배지 표시
-- **AI 생성 + 규칙 기반 폴백**: OpenRouter 무료 모델 우선, 실패/타임아웃/키 미설정 시 항상 폴백 코스로 동작. 폴백으로 응답하면 코스 상단에 그 사실을 표시한다 (`OPENROUTER_API_KEY` 없이도 서비스는 정상 동작)
+- **손수 짠 코스 + 규칙 기반 구성**: 검증한 장소로 직접 짠 추천 코스를 먼저 쓰고(부산·강원·충남·경기 당일, 경북 1박 2일), 없는 조합은 취향·추천지수·중복 배제 규칙으로 즉시 구성. 어느 쪽인지 코스 상단에 표시
 - **웰니스 강조**: 하루 1회 사우나 집중, 수분 500ml 안내, 사우나 전후 버퍼
 - **공유 URL**: 설정(지역/시군구/기간/취향)이 URL에 보존되어 복원·공유 가능
 - **전국 지도 자유 선택**: 지역 지도에서 임의 시군구 클릭(마커 클러스터링) + 드롭다운 선택
@@ -25,7 +25,6 @@
 - **Next.js 15.5** (App Router) · React 19 · TypeScript · Tailwind CSS
 - **Zod** (입력/코스 스키마 검증) · **Vitest** (단위) · **Playwright** (E2E)
 - **카카오 로컬 검색 REST API** (실시간 사우나/숙소, 무료·심사 없음)
-- **OpenRouter API** (무료 LLM, `json_schema` 강제)
 - **tourAPI** (한국관광공사, 폴백 데이터 소스)
 - **Leaflet + OpenStreetMap** (지도, API 키 불필요)
 
@@ -36,12 +35,11 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-AI 생성 없이도 폴백으로 동작합니다. 실시간 데이터/AI 사용 시 환경변수 등록:
+실시간 장소 검색을 쓰려면 환경변수를 등록합니다. 없어도 curated 장소로 정상 동작합니다:
 
 ```bash
 cp .env.example .env.local
 # KAKAO_REST_KEY=...        (카카오 개발자센터 REST API 키)
-# OPENROUTER_API_KEY=sk-or-...  (선택, 미설정 시 폴백)
 # TOURAPI_KEY=...           (선택, 폴백용)
 ```
 
@@ -60,17 +58,15 @@ npm run test:e2e   # Playwright E2E (10개 시나리오)
 | 게이트 | 상태 |
 |---|---|
 | 타입체크 | ✅ 0 error |
-| 단위 테스트 | ✅ 48 passed |
+| 단위 테스트 | ✅ 47 passed |
 | E2E (Playwright) | ✅ 10 passed |
 | 빌드 | ✅ 성공 |
 
 ## 📦 배포 (Vercel Free)
 
 1. GitHub 저장소 import → Framework: Next.js (자동 감지)
-2. 환경변수 등록: `KAKAO_REST_KEY`, `OPENROUTER_API_KEY`(선택), `TOURAPI_KEY`(선택)
+2. 환경변수 등록: `KAKAO_REST_KEY`, `TOURAPI_KEY`(선택)
 3. Deploy → 서버리스 Function(`/api/course`, `/api/places`) 자동 동작
-
-> 서버리스 타임아웃 고려: LLM 호출은 10초 하드 타임아웃 후 즉시 폴백.
 
 ## 🔒 보안 상태
 
@@ -92,9 +88,9 @@ npm run test:e2e   # Playwright E2E (10개 시나리오)
 ```
 src/
 ├── data/         # schema(Zod), seed(18곳 curated+숙소), verified(공식 확인 6곳), guides(여행 가이드)
-│                 # seed.enriched(tourAPI 보강)
+│                 # curatedCourses(손수 짠 코스), seed.enriched(tourAPI 보강)
 │                 # sigungu(230 시군구), regions-ko(전국 시군구명), rating(추천지수), share(URL)
-├── ai/           # course.schema·prompt·generate(LLM)·fallback·engine(오케스트레이션)
+├── ai/           # course.schema·fallback(규칙 기반 구성)·engine(오케스트레이션)
 ├── lib/          # kakao(로컬 검색), tourapi(폴백), rating
 ├── app/          # page + API 라우트 (/api/course, /api/places) · rate-limit은 라우트가 아닌 공용 모듈
 └── components/   # PlannerForm·CourseView·TravelGuides·RegionMapPicker·SaunaMap·CourseSkeleton·ErrorBoundary
@@ -114,8 +110,8 @@ docs/             # PRD·IA·analysis/*·design/*·deployment·review (SDLC 산�
 
 - **카카오 리뷰 부재 대응**: 평점 대신 `* 추천지수(rating)`를 자체 산출해 배지 표시
 - **숙소 자동 포함**: 다일차 여행 또는 옵션 켜짐 → 코스 마지막 stop(21:00)에 숙소 배치, 매일 다른 숙소 지향
-- **fail-soft**: LLM/외부 API 실패 시 항상 규칙 기반 코스로 응답 (런타임 중단 없음)
-- **무료 유지**: Vercel Free + GitHub Actions + 카카오/OpenRouter 무료 티어
+- **fail-soft**: 외부 API 실패 시에도 curated 장소로 코스를 만들어 응답 (런타임 중단 없음)
+- **무료 유지**: Vercel Free + GitHub Actions + 카카오 무료 티어
 
 ## 🌿 브랜치
 

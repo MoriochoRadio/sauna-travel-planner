@@ -29,5 +29,6 @@ export const CourseSchema = z.object({
 });
 export type Course = z.infer<typeof CourseSchema>;
 
-// usedFallback은 엔진이 주입 (응답 외 메타)
-export type CourseResult = Course & { usedFallback: boolean };
+// curated 는 엔진이 주입한다 (응답 외 메타).
+// true = 손수 짠 코스, false = 취향·평점 기반 규칙 생성. 둘 다 정상 경로다.
+export type CourseResult = Course & { curated: boolean };

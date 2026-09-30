@@ -24,24 +24,31 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// 후보 중 최고 점수를 고르되, 이미 코스에 쓰인 장소(seen)는 우선 배제.
-// 남은 후보가 없을 때만(재고 부족) 재사용을 허용해 항상 값을 반환한다.
-function pickBest(candidates: Place[], seen: Set<string>, sortFn: (a: Place, b: Place) => number): Place | undefined {
-  if (candidates.length === 0) return undefined;
-  const fresh = candidates.filter((p) => !seen.has(p.id));
-  const pool = fresh.length > 0 ? fresh : candidates;
-  const chosen = [...pool].sort(sortFn)[0] ?? pick(pool);
-  seen.add(chosen.id);
-  return chosen;
+// 배치 기록: used = 코스 전체에서 장소별 배치 횟수, today = 오늘 이미 넣은 장소
+type Usage = { used: Map<string, number>; today: Set<string> };
+
+function take(u: Usage, p: Place): Place {
+  u.used.set(p.id, (u.used.get(p.id) ?? 0) + 1);
+  u.today.add(p.id);
+  return p;
+}
+
+// 후보 중 최고 점수를 고르되, 같은 날 이미 넣은 장소는 절대 다시 쓰지 않는다.
+// 다른 날 쓴 장소는 재고가 모자랄 때만 — 가장 덜 쓴 곳부터 — 다시 쓴다.
+// 오늘 쓸 수 있는 후보가 없으면 undefined (호출부가 "자유 식사"처럼 비워 둔다).
+function pickBest(candidates: Place[], u: Usage, sortFn: (a: Place, b: Place) => number): Place | undefined {
+  const available = candidates.filter((p) => !u.today.has(p.id));
+  if (available.length === 0) return undefined;
+  const minUse = Math.min(...available.map((p) => u.used.get(p.id) ?? 0));
+  const pool = available.filter((p) => (u.used.get(p.id) ?? 0) === minUse);
+  return take(u, [...pool].sort(sortFn)[0] ?? pick(pool));
 }
 
 // second 사우나처럼 "없으면 다른 카드로 대체"가 가능한 슬롯은 재사용을 허용하지 않는다.
-function pickFreshOnly(candidates: Place[], seen: Set<string>, sortFn: (a: Place, b: Place) => number): Place | undefined {
-  const fresh = candidates.filter((p) => !seen.has(p.id));
+function pickFreshOnly(candidates: Place[], u: Usage, sortFn: (a: Place, b: Place) => number): Place | undefined {
+  const fresh = candidates.filter((p) => !u.used.has(p.id));
   if (fresh.length === 0) return undefined;
-  const chosen = [...fresh].sort(sortFn)[0];
-  seen.add(chosen.id);
-  return chosen;
+  return take(u, [...fresh].sort(sortFn)[0]);
 }
 
 // 시간대 템플릿 (도메인 규칙 R-1~R-4)
@@ -50,9 +57,10 @@ function buildDay(
   region: RegionData,
   prefs: Preference[],
   note: string | undefined,
-  opts: { anchorSauna?: Place; onsenFocus?: boolean; includeLodging?: boolean; sigungu?: string; seen: Set<string> }
+  opts: { anchorSauna?: Place; onsenFocus?: boolean; includeLodging?: boolean; sigungu?: string; used: Map<string, number> }
 ): Day {
-  const { anchorSauna, onsenFocus, includeLodging, sigungu, seen } = opts;
+  const { anchorSauna, onsenFocus, includeLodging, sigungu } = opts;
+  const u: Usage = { used: opts.used, today: new Set() };
   // 시군구 가중 (세부 지역 지정 시 해당 동네 장소 우선)
   const sigunguBoost = (p: Place) => (sigungu && p.sigungu === sigungu ? 5 : 0);
   // 핵심(사우나/온천/찜질방) 후보 — 선택 사우나 제외
@@ -75,16 +83,20 @@ function buildDay(
   // 첫 stop = 선택 사우나(있으면), 없으면 점수 높은 핵심(다른 날 이미 쓴 곳은 최대한 배제)
   let first: Place | undefined;
   if (anchorSauna) {
-    first = anchorSauna;
-    seen.add(anchorSauna.id);
+    first = take(u, anchorSauna);
   } else {
-    first = pickBest(saunaLike, seen, sortCore);
+    first = pickBest(saunaLike, u, sortCore);
   }
   // 둘째 사우나: 위에서 고른 first와 절대 겹치지 않게 — 후보가 없으면 완충 스팟으로 대체
-  const second = pickFreshOnly(saunaLike, seen, sortCore);
-  const lunch = pickBest(restaurants, seen, sortByPref);
-  const dinner = pickBest(restaurants, seen, sortByPref);
-  const attraction = pickBest(attractions, seen, sortByPref);
+  const second = pickFreshOnly(saunaLike, u, sortCore);
+  // 점심과 저녁은 같은 식당이 될 수 없다. 식당이 모자라면 한 끼는 자유 식사로 비워 둔다.
+  const lunch = pickBest(restaurants, u, sortByPref);
+  const dinner = pickBest(restaurants, u, sortByPref);
+  // 볼거리는 둘째 사우나가 없을 때만 실제로 배치하므로 그때만 고른다 (안 쓴 곳을 쓴 것으로 세지 않게)
+  const attraction = second ? undefined : pickBest(attractions, u, sortByPref);
+  const freeMeal = restaurants.length > 0
+    ? "추천 맛집은 다른 끼니에 넣었어요. 이번 끼니는 근처에서 자유롭게 골라 보세요."
+    : "근처에서 자유롭게 골라 보세요.";
   // 숙소 추천: includeLodging이거나 다일차(2일+) 여행이면 마지막에 배치
   // 온천/사우나 보유 숙소 우선, 없으면 일반 숙소도 포함(카카오 호텔 대부분 플래그 없음)
   const wantLodging = includeLodging || day >= 2;
@@ -111,8 +123,8 @@ function buildDay(
     {
       time: "13:00",
       placeId: lunch?.id,
-      title: lunch?.name ?? "점심",
-      reason: "사우나 전 가볍게 든든한 한 끼",
+      title: lunch?.name ?? "자유 식사",
+      reason: lunch ? "사우나 전 가볍게 든든한 한 끼" : freeMeal,
     },
     {
       time: "15:00",
@@ -124,8 +136,8 @@ function buildDay(
     {
       time: "18:00",
       placeId: dinner?.id,
-      title: dinner?.name ?? "저녁",
-      reason: "하루 마무리 보양 식사",
+      title: dinner?.name ?? "자유 식사",
+      reason: dinner ? "하루 마무리 보양 식사" : freeMeal,
     },
   ];
 
@@ -160,7 +172,7 @@ export function fallbackCourse(input: PlannerInput, region: RegionData): Course 
     ? region.places.find((p) => p.id === input.anchorSaunaId)
     : undefined;
   const days: Day[] = [];
-  const seen = new Set<string>(); // 날짜를 넘나드는 중복 배치 방지(같은 사우나·맛집 재등장 억제)
+  const used = new Map<string, number>(); // 날짜를 넘나드는 중복 배치 방지(같은 사우나·맛집 재등장 억제)
   for (let d = 1; d <= input.days; d++) {
     days.push(
       buildDay(d, region, input.preferences, input.note, {
@@ -168,7 +180,7 @@ export function fallbackCourse(input: PlannerInput, region: RegionData): Course 
         onsenFocus: input.onsenFocus,
         includeLodging: input.includeLodging,
         sigungu: input.sigungu,
-        seen,
+        used,
       })
     );
   }

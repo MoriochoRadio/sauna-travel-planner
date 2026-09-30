@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { fallbackCourse } from "./fallback";
-import { getRegion } from "../data/seed";
+import { getRegion, regions } from "../data/seed";
 import type { PlannerInput } from "../data/schema";
 
 const base: PlannerInput = {
@@ -86,6 +86,78 @@ describe("fallbackCourse — 중복 배치 방지", () => {
     for (const day of course.days) {
       for (const stop of day.stops) {
         expect(stop.reason).not.toMatch(/another/i);
+      }
+    }
+  });
+});
+
+describe("fallbackCourse — 재고가 적은 지역", () => {
+  // 실데이터는 주간 동기화로 바뀌므로, 재고를 일부러 줄인 지역을 만들어 검증한다
+  const shrink = (counts: Record<string, number>) => {
+    const region = getRegion("seoul")!;
+    const left = { ...counts };
+    return {
+      ...region,
+      places: region.places.filter((p) => !(p.type in left) || left[p.type]-- > 0),
+    };
+  };
+  const mealStops = (day: { stops: { time: string; placeId?: string; title: string; reason: string }[] }) =>
+    day.stops.filter((s) => s.time === "13:00" || s.time === "18:00");
+
+  it("모든 지역·기간에서 같은 날 같은 장소가 두 번 나오지 않는다", () => {
+    for (const r of regions) {
+      for (let days = 1; days <= 4; days++) {
+        const course = fallbackCourse({ ...base, region: r.id, days }, r);
+        for (const day of course.days) {
+          const ids = day.stops.map((s) => s.placeId).filter(Boolean);
+          expect(new Set(ids).size, `${r.id} ${days}일 코스 ${day.day}일차`).toBe(ids.length);
+        }
+      }
+    }
+  });
+
+  it("식당이 하나뿐이면 점심만 그 식당, 저녁은 자유 식사로 정직하게 표기한다", () => {
+    const region = shrink({ restaurant: 1 });
+    const course = fallbackCourse({ ...base, region: "seoul", days: 1 }, region);
+    const [lunch, dinner] = mealStops(course.days[0]);
+    expect(lunch.placeId).toBeDefined();
+    expect(dinner.placeId).toBeUndefined();
+    expect(dinner.title).toBe("자유 식사");
+    expect(dinner.reason).not.toMatch(/실패/);
+  });
+
+  it("식당이 없어도 끼니를 자유 식사로 두고 코스를 만든다", () => {
+    const region = shrink({ restaurant: 0 });
+    const course = fallbackCourse({ ...base, region: "seoul", days: 2 }, region);
+    for (const day of course.days) {
+      for (const meal of mealStops(day)) {
+        expect(meal.placeId).toBeUndefined();
+        expect(meal.title).toBe("자유 식사");
+      }
+    }
+  });
+
+  it("여러 날에 걸쳐 재사용할 때는 덜 쓴 식당·사우나부터 고른다", () => {
+    const region = shrink({ restaurant: 3, sauna: 1, jjimjilbang: 1, spa: 0 });
+    const course = fallbackCourse({ ...base, region: "seoul", days: 3 }, region);
+    const mealUse = new Map<string, number>();
+    for (const day of course.days) {
+      const [lunch, dinner] = mealStops(day);
+      expect(lunch.placeId).not.toBe(dinner.placeId);
+      for (const m of [lunch, dinner]) mealUse.set(m.placeId!, (mealUse.get(m.placeId!) ?? 0) + 1);
+    }
+    // 끼니 6번을 식당 3곳이 2번씩 나눠 맡는다
+    expect([...mealUse.values()]).toEqual([2, 2, 2]);
+    // 사우나 2곳이 매일 같은 곳으로 시작하지 않는다
+    const starts = new Set(course.days.map((d) => d.stops[0].placeId));
+    expect(starts.size).toBe(2);
+  });
+
+  it("코스 문구에 '실패'라는 말을 쓰지 않는다", () => {
+    for (const r of regions) {
+      const course = fallbackCourse({ ...base, region: r.id, days: 3 }, r);
+      for (const s of course.days.flatMap((d) => d.stops)) {
+        expect(`${s.title} ${s.reason} ${s.tip ?? ""}`).not.toMatch(/실패/);
       }
     }
   });

@@ -95,8 +95,9 @@ export function RegionMapPicker({
         const center = selected ?? list[0];
         const map = L.map(el).setView([center.lat, center.lng], mode === "nationwide" ? 7 : 9);
         mapRef.current = map;
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "&copy; OpenStreetMap",
+        // OSM 타일 정책: {s} 서브도메인(a/b/c) 대신 단일 호스트, 저작권 페이지로 링크한 출처 표기
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           maxZoom: 18,
         }).addTo(map);
 

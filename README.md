@@ -62,14 +62,14 @@ npm test           # vitest 단위 (카카오 키 있으면 live 병합 테스�
 npm run typecheck  # 타입 검증
 npm run lint       # ESLint
 npm run build      # 프로덕션 빌드
-npm run test:e2e   # Playwright E2E (10개 시나리오)
+npm run test:e2e   # Playwright E2E (11개 시나리오)
 ```
 
 | 게이트 | 상태 |
 |---|---|
 | 타입체크 | ✅ 0 error |
-| 단위 테스트 | ✅ 47 passed |
-| E2E (Playwright) | ✅ 10 passed |
+| 단위 테스트 | ✅ 68 passed |
+| E2E (Playwright) | ✅ 11 passed |
 | 빌드 | ✅ 성공 |
 
 ## 📦 배포 (Vercel Free)

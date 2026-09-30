@@ -89,18 +89,19 @@ npm run test:e2e   # Playwright E2E (10개 시나리오)
 
 ## 🔒 보안 상태
 
-`npm audit --omit=dev` 기준으로 관리한다. 마지막 점검일은 2026-08-18.
+`npm audit --omit=dev` 기준으로 관리한다. 마지막 점검일은 2026-09-30 — **0건**.
 
 | 항목 | 상태 |
 |---|---|
 | Next.js 직접 권고(SSRF·DoS·캐시 혼동·서버 함수 노출 등 8건) | ✅ 해소 (15.5.23) |
+| Next.js 원격 코드 실행 2건(이미지 최적화 AVIF [GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4), Windows 호스트 [GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36)) | ✅ 해소 (15.5.26 — 15.5.24부터 패치) |
 | postcss(직접 의존) | ✅ 해소 (8.5.23+) |
-| nanoid · sharp | ✅ 해소 (overrides로 패치 버전 고정) |
-| next 내부에 중첩된 postcss 8.4.31 | ⚠ 잔존 |
+| nanoid · sharp | ✅ 해소 (overrides로 패치 버전 고정, sharp는 libheif 권고 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c) 때문에 0.35.4+) |
+| next 내부에 중첩된 postcss 8.4.31 | ✅ 해소 (overrides로 직접 의존 postcss와 같은 버전 사용) |
 
-잔존 항목은 Next 15가 `postcss: "8.4.31"`을 정확히 핀으로 박아 두어 npm overrides로 교체되지 않는다. 해당 권고는 CSS stringify XSS와 sourceMappingURL 경로 탐색으로, **빌드 시점에 공격자가 CSS 입력을 제어할 수 있을 때** 성립한다. 이 저장소의 CSS는 전부 자체 작성분이라 현재 구성에서는 악용 경로가 없다.
+Next 15는 `postcss: "8.4.31"`을 정확히 핀으로 박아 둔다. `overrides.next.postcss`를 `"$postcss"`(직접 의존 버전 참조)로 두어 Next 내부 CSS 처리도 패치된 8.5.x를 쓰게 했다. 같은 메이저(8.x) 안의 업데이트이고, 빌드 산출 CSS가 교체 전과 바이트 단위로 같음을 확인했다(2026-09-30). Next를 올린 뒤 CSS 빌드가 깨지면 이 override부터 의심한다.
 
-완전히 없애려면 Next 16(메이저) 업그레이드가 필요하다. 동작 중인 프로덕션 앱의 메이저 업그레이드라 별도 검증과 함께 진행할 사안으로 남겨 둔다.
+개발 도구(vitest·Playwright 등)에 걸린 권고는 배포 산출물에 들어가지 않아 이 표의 범위 밖이다. `npm audit`(개발 의존 포함)로 따로 확인한다.
 
 ## 📁 프로젝트 구조
 

@@ -22,13 +22,24 @@ const KEY = process.env.TOURAPI_KEY;
 // 로컬 검증용 재정의 (예: 존재하지 않는 호스트로 네트워크 실패 재현)
 const BASE = process.env.TOURAPI_BASE || "https://apis.data.go.kr/B551011/KorService2";
 
+// 앱의 18개 region 전부 (src/data/schema.ts Region). query = areaBasedList2 지역 조건.
+// 경주는 경북(areaCode 35) 전체를 받으면 상주·경산 등이 섞이므로 경주시로 한정한다.
+//   법정동 코드(경북 47, 경주시 47130)로 조회하고, 조건이 무시되더라도 주소로 한 번 더 거른다(onlyCity).
 const REGIONS = [
-  { id: "seoul", areaCode: "1" }, { id: "incheon", areaCode: "2" },
-  { id: "daejeon", areaCode: "3" }, { id: "daegu", areaCode: "4" },
-  { id: "gwangju", areaCode: "5" }, { id: "busan", areaCode: "6" },
-  { id: "gangwon", areaCode: "32" }, { id: "gyeongju", areaCode: "35" },
-  { id: "jeju", areaCode: "39" },
+  { id: "seoul", query: { areaCode: "1" } }, { id: "incheon", query: { areaCode: "2" } },
+  { id: "daejeon", query: { areaCode: "3" } }, { id: "daegu", query: { areaCode: "4" } },
+  { id: "gwangju", query: { areaCode: "5" } }, { id: "busan", query: { areaCode: "6" } },
+  { id: "ulsan", query: { areaCode: "7" } }, { id: "sejong", query: { areaCode: "8" } },
+  { id: "gyeonggi", query: { areaCode: "31" } }, { id: "gangwon", query: { areaCode: "32" } },
+  { id: "chungbuk", query: { areaCode: "33" } }, { id: "chungnam", query: { areaCode: "34" } },
+  { id: "gyeongbuk", query: { areaCode: "35" } }, { id: "gyeongnam", query: { areaCode: "36" } },
+  { id: "jeonbuk", query: { areaCode: "37" } }, { id: "jeonnam", query: { areaCode: "38" } },
+  { id: "jeju", query: { areaCode: "39" } },
+  { id: "gyeongju", query: { lDongRegnCd: "47", lDongSignguCd: "130" }, onlyCity: "경주시" },
 ];
+
+// 주소 "경상북도 경주시 …" → 두 번째 토큰(시군구)
+const cityOf = (addr) => (addr || "").trim().split(/\s+/)[1];
 
 // ── 호출 정책 ──
 // GitHub 러너 → apis.data.go.kr 연결이 간헐적으로 10초(fetch 기본 연결 타임아웃)를 넘겨
@@ -108,11 +119,12 @@ async function request(op, params) {
   }
 }
 
-async function fetchAll(areaCode, contentTypeId) {
+// arrange C = 최근 수정순. 제목 가나다순이면 "가"로 시작하는 곳만 뽑혀 지역 대표성이 없다.
+async function fetchAll(query, contentTypeId) {
   const out = [];
   for (let page = 1; page <= 5; page++) {
     const json = await request("areaBasedList2", {
-      numOfRows: "100", pageNo: String(page), areaCode, contentTypeId,
+      numOfRows: "100", pageNo: String(page), arrange: "C", ...query, contentTypeId,
     });
     const raw = json?.response?.body?.items?.item;
     if (!raw) break;
@@ -126,30 +138,12 @@ async function fetchAll(areaCode, contentTypeId) {
 // areaBasedList2 응답에 mapx/mapy/homepage가 이미 포함되므로 detailCommon2 호출 불필요
 const SAUNA_KW = ["온천", "사우나", "찜질", "스파", "목욕", "욕장", "찜질방", "hotspring", "spa", "대온천"];
 
-// 동기화 스크립트용 시군구 매핑 (sigungu.ts와 동일 로직, .mjs 호환)
-const SIGUNGU = [
-  { region: "seoul", name: "중구", full: "서울 중구" }, { region: "seoul", name: "영등포구", full: "서울 영등포구" },
-  { region: "seoul", name: "용산구", full: "서울 용산구" }, { region: "seoul", name: "종로구", full: "서울 종로구" }, { region: "seoul", name: "강남구", full: "서울 강남구" },
-  { region: "busan", name: "해운대구", full: "부산 해운대구" }, { region: "busan", name: "수영구", full: "부산 수영구" }, { region: "busan", name: "동래구", full: "부산 동래구" }, { region: "busan", name: "부산진구", full: "부산 부산진구" }, { region: "busan", name: "사하구", full: "부산 사하구" },
-  { region: "gangwon", name: "평창군", full: "강원 평창군" }, { region: "gangwon", name: "강릉시", full: "강원 강릉시" }, { region: "gangwon", name: "춘천시", full: "강원 춘천시" }, { region: "gangwon", name: "속초시", full: "강원 속초시" },
-  { region: "gyeongju", name: "경주시", full: "경북 경주시" },
-  { region: "jeju", name: "제주시", full: "제주 제주시" }, { region: "jeju", name: "서귀포시", full: "제주 서귀포시" },
-  { region: "incheon", name: "계양구", full: "인천 계양구" }, { region: "incheon", name: "연수구", full: "인천 연수구" }, { region: "incheon", name: "중구", full: "인천 중구" },
-  { region: "daejeon", name: "유성구", full: "대전 유성구" }, { region: "daejeon", name: "서구", full: "대전 서구" }, { region: "daejeon", name: "중구", full: "대전 중구" },
-  { region: "gwangju", name: "동구", full: "광주 동구" }, { region: "gwangju", name: "서구", full: "광주 서구" }, { region: "gwangju", name: "북구", full: "광주 북구" },
-  { region: "daegu", name: "달서구", full: "대구 달서구" }, { region: "daegu", name: "중구", full: "대구 중구" }, { region: "daegu", name: "남구", full: "대구 남구" }, { region: "daegu", name: "수성구", full: "대구 수성구" },
-];
-function findSigunguLocal(regionId, cityText) {
-  const t = (cityText || "").trim();
-  const found = SIGUNGU.find((s) => s.region === regionId && (s.full === t || s.name === t));
-  return found ? `${regionId}-${found.name}` : undefined;
-}
-
 // tourAPI raw item → 우리 도메인 Place 객체로 매핑
+// 시군구 id는 여기서 정하지 않는다. seed.ts가 city("서울특별시 강남구")를 findSigungu로 매핑한다 —
+// 전국 230개 목록과 시도명 정규화를 한 곳(src/data/sigungu.ts)에서만 관리하기 위해서다.
 function toPlace(item, regionId, type, idx) {
   const addr = (item.addr1 || "").trim();
   const city = addr.split(/\s+/).slice(0, 2).join(" ") || regionId;
-  const sigungu = findSigunguLocal(regionId, city);
   const tel = (item.tel || "").trim();
   return {
     id: `${regionId}-${type === "restaurant" ? "food" : type === "lodging" ? "stay" : "att"}-api-${idx}`,
@@ -157,7 +151,6 @@ function toPlace(item, regionId, type, idx) {
     type,
     region: regionId,
     city,
-    sigungu: sigungu || undefined,
     summary: type === "restaurant"
       ? "tourAPI 등록 맛집 — 사우나 전후 식사 코스"
       : type === "lodging"
@@ -186,31 +179,42 @@ function stripTags(s) {
   return s.replace(/<[^>]+>/g, "").trim() || undefined;
 }
 
+// 제목 중복을 빼고, 시군구를 번갈아 가며 n곳을 고른다 (한 구에 몰리면 시군구 가중이 소용없다).
+// 같은 시군구 안에서는 응답 순서(최근 수정순)를 따른다.
+function spread(items, n) {
+  const seen = new Set();
+  const groups = new Map();
+  for (const i of items) {
+    if (!i.title || seen.has(i.title)) continue;
+    seen.add(i.title);
+    const key = cityOf(i.addr1) ?? "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(i);
+  }
+  const out = [];
+  const queues = [...groups.values()];
+  while (out.length < n && queues.some((q) => q.length > 0)) {
+    for (const q of queues) if (q.length > 0 && out.length < n) out.push(q.shift());
+  }
+  return out;
+}
+
 // 분류별 가공: 원시 목록 → { places, stats(enrichedSummary 필드) }
 function buildFood(items, regionId) {
-  const seen = new Set();
-  const places = items
-    .filter((i) => i.title && !seen.has(i.title) && seen.add(i.title))
-    .slice(0, 8)
-    .map((i, idx) => toPlace(i, regionId, "restaurant", idx + 1));
+  const places = spread(items, 8).map((i, idx) => toPlace(i, regionId, "restaurant", idx + 1));
   return { places, stats: { foodCount: items.length } };
 }
 
 function buildAttr(items, regionId) {
   const filtered = items.filter((i) => !SAUNA_KW.some((k) => (i.title || "").toLowerCase().includes(k.toLowerCase())));
-  const seen = new Set();
-  const places = filtered
-    .filter((i) => i.title && !seen.has(i.title) && seen.add(i.title))
-    .slice(0, 8)
-    .map((i, idx) => toPlace(i, regionId, "attraction", idx + 1));
+  const places = spread(filtered, 8).map((i, idx) => toPlace(i, regionId, "attraction", idx + 1));
   return { places, stats: { attrCount: filtered.length } };
 }
 
 // 숙소: 실데이터 + onsen/sauna 추정 (이름 기준 — tourAPI 목록은 overview 미제공)
 function buildStay(items, regionId) {
-  const seen = new Set();
   const places = [];
-  for (const i of items.filter((x) => x.title && !seen.has(x.title) && seen.add(x.title)).slice(0, 10)) {
+  for (const i of spread(items, 10)) {
     const blob = `${i.title} ${(i.overview || "")}`.toLowerCase();
     const hasOnsen = SAUNA_KW.some((k) => blob.includes(k.toLowerCase()));
     const place = toPlace(i, regionId, "lodging", places.length + 1);
@@ -253,8 +257,12 @@ function loadPrevious() {
 }
 
 // 실패했거나 0건인 지역·분류는 기존 장소와 요약 값을 그대로 옮긴다
-function keepPrevious(prev, c, regionId) {
-  const places = (prev.enrichedPlaces[regionId] ?? []).filter((p) => p.type === c.type);
+// (경주처럼 시군구를 한정한 지역은 예전에 섞여 들어온 다른 시군구 장소를 여기서 걸러낸다)
+function keepPrevious(prev, c, r) {
+  const regionId = r.id;
+  const places = (prev.enrichedPlaces[regionId] ?? [])
+    .filter((p) => p.type === c.type)
+    .filter((p) => !r.onlyCity || cityOf(p.address ?? p.city) === r.onlyCity);
   const prevStat = prev.enrichedSummary.find((s) => s.region === regionId) ?? {};
   const stats = c.build([], regionId).stats; // 기존 요약이 없으면 0건
   for (const k of Object.keys(stats)) if (k in prevStat) stats[k] = prevStat[k];
@@ -277,7 +285,9 @@ async function collect(prev) {
       let built = null;
       if (!humanAction && networkFails < MAX_CONSECUTIVE_NETWORK_FAILS) {
         try {
-          built = c.build(await fetchAll(r.areaCode, c.contentTypeId), r.id);
+          const items = (await fetchAll(r.query, c.contentTypeId))
+            .filter((i) => !r.onlyCity || cityOf(i.addr1) === r.onlyCity);
+          built = c.build(items, r.id);
           networkFails = 0;
         } catch (e) {
           console.warn(`${r.id} ${c.key} 실패`, e.message);
@@ -288,7 +298,7 @@ async function collect(prev) {
         }
       }
       if (built && built.places.length > 0) { fresh++; parts.push(built); }
-      else { keptHere.push(c.key); parts.push(keepPrevious(prev, c, r.id)); }
+      else { keptHere.push(c.key); parts.push(keepPrevious(prev, c, r)); }
     }
     // 지역 전체를 유지했으면 지역 id만, 일부면 "지역:분류"로 기록
     if (keptHere.length === CATEGORIES.length) kept.push(r.id);

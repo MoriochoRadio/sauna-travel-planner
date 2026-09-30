@@ -78,3 +78,18 @@ describe("fallbackCourse — 시군구 가중이 다른 광역시 같은 이름 
     expect(checked.length).toBeGreaterThan(1);
   });
 });
+
+describe("tourAPI 보강 장소 — 정식 시도명 주소도 시군구로 매핑된다", () => {
+  test("주소의 시군구가 목록에 있으면 sigungu가 붙는다 (\"서울특별시 강남구\" → seoul-강남구)", () => {
+    const missing: string[] = [];
+    for (const r of regions) {
+      const scope = r.id === "gyeongju" ? "gyeongbuk" : r.id;
+      const names = new Set(getSigungus(scope).map((s) => s.name));
+      for (const p of r.places.filter((x) => x.source === "tourapi")) {
+        const gu = p.city.split(" ")[1];
+        if (gu && names.has(gu) && !p.sigungu) missing.push(`${p.id} ${p.city}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+});

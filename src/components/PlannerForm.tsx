@@ -426,7 +426,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
           <div className="flex gap-2">
             <button className="btn-secondary flex-1" onClick={() => goToStep(2)}>← 이전</button>
             <button className="btn-primary flex-1" onClick={submit} disabled={loading}>
-              {loading ? "AI가 코스를 짜고 있어요…" : "코스 만들기"}
+              {loading ? "코스를 짜고 있어요…" : "코스 만들기"}
             </button>
           </div>
         </section>
@@ -458,7 +458,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
           </div>
           <div>
             <dt className="mb-0.5 text-xs text-white/50">사우나</dt>
-            <dd className="font-semibold text-[#FFFCF6]">{anchorSauna ? anchorSauna.name : "미선택 (AI 추천)"}</dd>
+            <dd className="font-semibold text-[#FFFCF6]">{anchorSauna ? anchorSauna.name : "미선택 (자동 추천)"}</dd>
           </div>
           <div>
             <dt className="mb-0.5 text-xs text-white/50">여행 모드</dt>

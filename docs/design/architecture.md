@@ -65,7 +65,7 @@ src/
 ## 3. 의사결정 (DDD-lite)
 
 - 도메인 로직(AI 생성/폴백)은 `src/ai`에 격리 → UI와 무관하게 테스트 가능
-- 데이터는 `src/data`에 격리 → tourAPI 보강 시 이层만 교체
+- 데이터는 `src/data`에 격리 → tourAPI 보강 시 이 계층만 교체
 - API 경계에서만 Zod 검증 → trust boundary 명확
 
 ## 4. 배포 토폴로지

@@ -109,7 +109,7 @@ export default function Home() {
               </p>
               <p className="mt-3 max-w-md text-xs leading-relaxed text-white/55">
                 지역·기간·취향을 입력하면 하루 코스가 완성됩니다. 실시간 카카오 장소 데이터와
-                AI 추천을 함께 씁니다.
+                검증한 큐레이션을 함께 씁니다.
               </p>
             </div>
             <nav className="flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-white/70">

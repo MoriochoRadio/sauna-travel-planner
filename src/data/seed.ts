@@ -255,7 +255,7 @@ export const regions: RegionData[] = [
 ];
 
 // ── 17시도 온천·사우나 보유 숙소 curated (코스 자동 포함용) ──
-// 각 시도 1~2개, hasOnsen/hasSauna 표기로 fallback/LLM에서 숙소 추천 가중
+// 각 시도 1~2개, hasOnsen/hasSauna 표기로 fallback에서 숙소 추천 가중
 const LODGING_BY_REGION: Record<string, Place[]> = {
   seoul: [
     { id: "seoul-lodging-01", name: "서울 스파 캡슐 호텔", type: "lodging", region: "seoul", city: "서울 중구", summary: "동대문 인근 온천·사우나 복합 숙소", tags: ["온천","사우나","프리미엄"], priceLevel: "mid", avgDurationMin: 480, hasOnsen: true, hasSauna: true, highlights: ["노천탕","캡슐","중심가"] },

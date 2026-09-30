@@ -13,7 +13,7 @@ export const CORE_TYPES: PlaceType[] = ["sauna", "jjimjilbang", "spa", "lodging"
 export const Region = z.enum([
   "seoul", "busan", "daegu", "incheon", "gwangju", "daejeon", "ulsan", "sejong",
   "gyeonggi", "gangwon", "chungbuk", "chungnam", "jeonbuk", "jeonnam", "gyeongbuk", "gyeongnam", "jeju",
-  "gyeongju", // 경주 (경북 내 온천지구级, 기존 curated 데이터 호환용 독립 region)
+  "gyeongju", // 경주 (경북 안의 온천지구, 기존 curated 데이터 호환용 독립 region)
 ]);
 export type Region = z.infer<typeof Region>;
 

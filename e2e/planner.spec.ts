@@ -44,6 +44,8 @@ test("소개 문구의 지역 수가 드롭다운(17개 시도 + 경주)과 맞�
   await page.goto("/");
   await expect(page.getByLabel("지역 선택", { exact: true }).locator("option")).toHaveCount(18);
   await expect(page.getByText(/17개 시도와 경주 온천지구/)).toBeVisible();
+  // AI 코스 생성은 2026-08-24에 걷어냈다 — 화면이 AI를 내세우지 않는다
+  await expect(page.getByText(/\bAI\b/)).toHaveCount(0);
 });
 
 test("사우나를 고르지 않아도 추천 코스가 생성된다", async ({ page }) => {

@@ -3,7 +3,7 @@ import { z } from "zod";
 // 장소 전체 스키마 (live+curated 병합본, 코스와 함께 실려 화면 매핑용)
 import { PlaceSchema } from "../data/schema";
 
-// ── 코스 출력 스키마 (LLM 응답 검증용) ───────────────────────
+// ── 코스 출력 스키마 (엔진 응답 검증용) ───────────────────────
 export const CourseStopSchema = z.object({
   time: z.string(),                  // "10:00"
   placeId: z.string().optional(),    // seed id 참조(환각 억제)

@@ -71,8 +71,8 @@ export default function Home() {
                   지역과 취향만 고르면 됩니다
                 </h2>
                 <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-bark-soft lg:mx-0">
-                  전국 17개 시도·230개 시군구에서 사우나와 온천을 찾고, 실시간 장소 데이터와
-                  AI 추천으로 시간대별 동선을 만들어 드립니다.
+                  전국 17개 시도와 경주 온천지구, 230개 시군구에서 사우나와 온천을 찾고,
+                  실시간 장소 데이터와 검증한 큐레이션으로 시간대별 동선을 만들어 드립니다.
                 </p>
                 {/* 물결 구분선 */}
                 <svg aria-hidden viewBox="0 0 200 12" preserveAspectRatio="none" className="mx-auto mt-6 h-3 w-24 opacity-70 lg:mx-0">

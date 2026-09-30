@@ -40,6 +40,12 @@ test("9곳 지역이 드롭다운에 모두 있다", async ({ page }) => {
   }
 });
 
+test("소개 문구의 지역 수가 드롭다운(17개 시도 + 경주)과 맞다", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByLabel("지역 선택", { exact: true }).locator("option")).toHaveCount(18);
+  await expect(page.getByText(/17개 시도와 경주 온천지구/)).toBeVisible();
+});
+
 test("사우나를 고르지 않아도 추천 코스가 생성된다", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("지역 선택", { exact: true }).selectOption("jeju");

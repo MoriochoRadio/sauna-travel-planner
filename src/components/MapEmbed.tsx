@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Place } from "@/data/schema";
+import { escapeHtml } from "@/lib/html";
 
 type Coord = { lat: number; lng: number; name: string; id: string };
 
@@ -45,7 +46,8 @@ export function MapEmbed({ places, selectedId }: { places: Place[]; selectedId?:
             map,
             position: new kakao.maps.LatLng(c.lat, c.lng),
           });
-          const infow = new kakao.maps.InfoWindow({ content: `<div style="padding:4px 8px;font-size:12px">${c.name}</div>` });
+          // 장소명은 외부 API 응답 — HTML로 해석되지 않게 이스케이프한다
+          const infow = new kakao.maps.InfoWindow({ content: `<div style="padding:4px 8px;font-size:12px">${escapeHtml(c.name)}</div>` });
           const sel = c.id === selectedId;
           if (sel) {
             map.setCenter(new kakao.maps.LatLng(c.lat, c.lng));

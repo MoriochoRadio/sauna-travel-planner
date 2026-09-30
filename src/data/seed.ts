@@ -19,7 +19,7 @@ function withRating(p: Place): Place {
 function withSigungu(p: Place): Place {
   const base = p.rating != null ? p : withRating(p);
   if (base.sigungu) return base;
-  const s = findSigungu(base.city);
+  const s = findSigungu(base.city, base.region);
   return s ? { ...base, sigungu: s } : base;
 }
 

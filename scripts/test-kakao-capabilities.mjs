@@ -1,5 +1,7 @@
 // 카카오 API 제공 기능 실증 (현재 키로 실제 호출)
-const KEY = process.env.KAKAO_REST_KEY || "42acc52eeb96f3c884ad3ea5ee9144e1";
+// 실행: KAKAO_REST_KEY=xxx node scripts/test-kakao-capabilities.mjs
+const KEY = process.env.KAKAO_REST_KEY;
+if (!KEY) { console.error("KAKAO_REST_KEY env 필요 (키는 코드에 넣지 말고 환경변수로만 전달)"); process.exit(1); }
 const x = 126.9045, y = 37.5602; // 서울 중구
 
 const tests = [

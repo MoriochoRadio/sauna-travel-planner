@@ -2,14 +2,25 @@
 // 사우나/온천 = curated seed 유지, 맛집/볼거리/숙소 = tourAPI 실데이터 보강
 // 실행: TOURAPI_KEY=xxx node scripts/sync-tourapi.mjs
 // 결과: src/data/seed.enriched.ts 생성 (실사용 Place[] + 요약)
-import { writeFileSync } from "node:fs";
+//       src/data/sync-status.json (마지막 시도 시각·결과 — 워크플로가 필요할 때만 커밋)
+//
+// fail-safe: 호출이 실패했거나 0건인 지역·분류는 기존 파일의 데이터를 그대로 둔다.
+//   전부 실패하면 데이터 파일을 쓰지 않는다 → 키가 만료돼도 사이트는 마지막 정상본으로 동작.
+//   사람이 조치해야 할 때(키 오류, 3주 연속 전체 실패)만 GITHUB_OUTPUT `alert`에 사유를 남기고,
+//   워크플로 마지막 단계가 이를 실패로 올린다. 일시 네트워크 오류는 경고만 남긴다.
+//   처리된 실패는 exit 0 (커밋·알림 단계가 이어서 돌도록). 예상 못 한 예외만 exit 1.
+import { readFileSync, writeFileSync, existsSync, appendFileSync } from "node:fs";
+import http from "node:http";
+import https from "node:https";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(__dirname, "../src/data/seed.enriched.ts");
+const STATUS_OUT = resolve(__dirname, "../src/data/sync-status.json");
 const KEY = process.env.TOURAPI_KEY;
-if (!KEY) { console.error("TOURAPI_KEY env 필요"); process.exit(1); }
+// 로컬 검증용 재정의 (예: 존재하지 않는 호스트로 네트워크 실패 재현)
+const BASE = process.env.TOURAPI_BASE || "https://apis.data.go.kr/B551011/KorService2";
 
 const REGIONS = [
   { id: "seoul", areaCode: "1" }, { id: "incheon", areaCode: "2" },
@@ -19,16 +30,90 @@ const REGIONS = [
   { id: "jeju", areaCode: "39" },
 ];
 
+// ── 호출 정책 ──
+// GitHub 러너 → apis.data.go.kr 연결이 간헐적으로 10초(fetch 기본 연결 타임아웃)를 넘겨
+// 전 지역이 한꺼번에 실패한 적이 있다. 연결 대기를 늘리고, 일시 오류만 백오프 재시도한다.
+const TIMEOUT_MS = 30_000;          // 연결·응답 대기 (소켓 무응답 기준)
+const MAX_ATTEMPTS = 4;             // 최초 1회 + 재시도 3회
+const BACKOFF_MS = 2_000;           // 2초 → 4초 → 8초
+const MAX_CONSECUTIVE_NETWORK_FAILS = 3; // 연결 자체가 연속 실패하면 나머지 호출은 생략
+const STALE_ALERT_DAYS = 20;        // 주 1회 기준 3회 연속 전체 실패(21일)에서 알림, 크론 지연 여유 1일
+
+// 사람이 조치해야 하는 응답 (공공데이터포털 게이트웨이 errMsg / 인증 실패 HTTP 상태)
+// 예) 키 없음 → 401 SERVICE_KEY_IS_NULL, 미등록 키 → 403 SERVICE_KEY_IS_NOT_REGISTERED_ERROR
+const KEY_ERRORS = [
+  "SERVICE_KEY_IS_NULL",
+  "SERVICE_KEY_IS_NOT_REGISTERED_ERROR",
+  "DEADLINE_HAS_EXPIRED_ERROR",     // 활용기간 만료
+  "SERVICE_ACCESS_DENIED_ERROR",
+  "UNREGISTERED_IP_ERROR",
+  "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR",
+];
+
+class HumanActionError extends Error {}
+class NetworkError extends Error {}   // 연결 실패·타임아웃 (재시도 대상)
+class RetryableError extends Error {} // 429·5xx (재시도 대상)
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function get(url) {
+  const lib = url.startsWith("http:") ? http : https;
+  return new Promise((resolveGet, reject) => {
+    const req = lib.get(url, { timeout: TIMEOUT_MS }, (res) => {
+      let body = "";
+      res.setEncoding("utf8");
+      res.on("data", (c) => (body += c));
+      res.on("end", () => resolveGet({ status: res.statusCode, body }));
+      res.on("error", reject);
+    });
+    req.on("timeout", () => req.destroy(Object.assign(new Error(`${TIMEOUT_MS / 1000}초 내 응답 없음`), { code: "ETIMEDOUT" })));
+    req.on("error", reject);
+  });
+}
+
+async function requestOnce(url) {
+  let res;
+  try { res = await get(url); }
+  catch (e) { throw new NetworkError(`연결 실패: ${e.message || e.code || e}`); }
+  const { status, body } = res;
+  const keyError = KEY_ERRORS.find((c) => body.includes(c));
+  if (keyError || status === 401 || status === 403) {
+    throw new HumanActionError(`키/권한 오류 ${keyError || `HTTP ${status}`}`);
+  }
+  if (status === 429 || status >= 500) throw new RetryableError(`HTTP ${status}`);
+  if (status !== 200) throw new Error(`HTTP ${status}`);
+  let json;
+  try { json = JSON.parse(body); } catch { throw new Error(`JSON 아닌 응답: ${body.slice(0, 80)}`); }
+  const header = json?.response?.header ?? json; // 파라미터 오류 등은 최상위에 resultCode가 온다
+  if (header?.resultCode && !/^0+$/.test(header.resultCode)) {
+    throw new Error(`resultCode ${header.resultCode} ${header.resultMsg ?? ""}`.trim());
+  }
+  return json;
+}
+
+async function request(op, params) {
+  const qs = new URLSearchParams({
+    serviceKey: KEY, MobileOS: "ETC", MobileApp: "saunaplanner", _type: "json", ...params,
+  });
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await requestOnce(`${BASE}/${op}?${qs}`);
+    } catch (e) {
+      const retryable = e instanceof NetworkError || e instanceof RetryableError;
+      if (!retryable || attempt === MAX_ATTEMPTS) throw e;
+      const wait = BACKOFF_MS * 2 ** (attempt - 1);
+      console.warn(`   ↻ ${e.message} — ${wait / 1000}초 후 재시도 (${attempt}/${MAX_ATTEMPTS - 1})`);
+      await sleep(wait);
+    }
+  }
+}
+
 async function fetchAll(areaCode, contentTypeId) {
   const out = [];
   for (let page = 1; page <= 5; page++) {
-    const qs = new URLSearchParams({
-      serviceKey: KEY, MobileOS: "ETC", MobileApp: "saunaplanner", _type: "json",
+    const json = await request("areaBasedList2", {
       numOfRows: "100", pageNo: String(page), areaCode, contentTypeId,
     });
-    const res = await fetch(`https://apis.data.go.kr/B551011/KorService2/areaBasedList2?${qs}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
     const raw = json?.response?.body?.items?.item;
     if (!raw) break;
     const arr = Array.isArray(raw) ? raw : [raw];
@@ -101,57 +186,128 @@ function stripTags(s) {
   return s.replace(/<[^>]+>/g, "").trim() || undefined;
 }
 
-async function collect() {
-  const stats = [];
-  const enrichedPlaces = {};
-  for (const r of REGIONS) {
-    let food = [], attr = [], stay = [];
-    try { food = await fetchAll(r.areaCode, "39"); } catch (e) { console.warn(`${r.id} food 실패`, e.message); }
-    try { attr = await fetchAll(r.areaCode, "12"); } catch (e) { console.warn(`${r.id} attr 실패`, e.message); }
-    try { stay = await fetchAll(r.areaCode, "32"); } catch (e) { console.warn(`${r.id} stay 실패`, e.message); }
-
-    const attrFiltered = attr.filter((i) => !SAUNA_KW.some((k) => (i.title || "").toLowerCase().includes(k.toLowerCase())));
-
-    const seenFood = new Set();
-    const foodPlaces = food
-      .filter((i) => i.title && !seenFood.has(i.title) && seenFood.add(i.title))
-      .slice(0, 8)
-      .map((i, idx) => toPlace(i, r.id, "restaurant", idx + 1));
-
-    const seenAttr = new Set();
-    const attrPlaces = attrFiltered
-      .filter((i) => i.title && !seenAttr.has(i.title) && seenAttr.add(i.title))
-      .slice(0, 8)
-      .map((i, idx) => toPlace(i, r.id, "attraction", idx + 1));
-
-    // 숙소: 실데이터 + onsen/sauna 추정 (이름 기준 — tourAPI 목록은 overview 미제공)
-    const seenStay = new Set();
-    const stayPlaces = [];
-    for (const i of stay.filter((x) => x.title && !seenStay.has(x.title) && seenStay.add(x.title)).slice(0, 10)) {
-      const blob = `${i.title} ${(i.overview || "")}`.toLowerCase();
-      const hasOnsen = SAUNA_KW.some((k) => blob.includes(k.toLowerCase()));
-      const place = toPlace(i, r.id, "lodging", stayPlaces.length + 1);
-      place.hasOnsen = hasOnsen || undefined;
-      place.hasSauna = blob.includes("사우나") || blob.includes("찜질") || undefined;
-      stayPlaces.push(place);
-    }
-
-    enrichedPlaces[r.id] = [...foodPlaces, ...attrPlaces, ...stayPlaces];
-
-    stats.push({
-      region: r.id,
-      foodCount: food.length,
-      attrCount: attrFiltered.length,
-      stayCount: stay.length,
-      stayWithOnsen: stayPlaces.filter((p) => p.hasOnsen).length,
-      stayTitles: stayPlaces.slice(0, 5).map((p) => p.name),
-    });
-  }
-  return { stats, enrichedPlaces };
+// 분류별 가공: 원시 목록 → { places, stats(enrichedSummary 필드) }
+function buildFood(items, regionId) {
+  const seen = new Set();
+  const places = items
+    .filter((i) => i.title && !seen.has(i.title) && seen.add(i.title))
+    .slice(0, 8)
+    .map((i, idx) => toPlace(i, regionId, "restaurant", idx + 1));
+  return { places, stats: { foodCount: items.length } };
 }
 
-const { stats, enrichedPlaces } = await collect();
-const ts = `// auto-generated by scripts/sync-tourapi.mjs — ${new Date().toISOString()}
+function buildAttr(items, regionId) {
+  const filtered = items.filter((i) => !SAUNA_KW.some((k) => (i.title || "").toLowerCase().includes(k.toLowerCase())));
+  const seen = new Set();
+  const places = filtered
+    .filter((i) => i.title && !seen.has(i.title) && seen.add(i.title))
+    .slice(0, 8)
+    .map((i, idx) => toPlace(i, regionId, "attraction", idx + 1));
+  return { places, stats: { attrCount: filtered.length } };
+}
+
+// 숙소: 실데이터 + onsen/sauna 추정 (이름 기준 — tourAPI 목록은 overview 미제공)
+function buildStay(items, regionId) {
+  const seen = new Set();
+  const places = [];
+  for (const i of items.filter((x) => x.title && !seen.has(x.title) && seen.add(x.title)).slice(0, 10)) {
+    const blob = `${i.title} ${(i.overview || "")}`.toLowerCase();
+    const hasOnsen = SAUNA_KW.some((k) => blob.includes(k.toLowerCase()));
+    const place = toPlace(i, regionId, "lodging", places.length + 1);
+    place.hasOnsen = hasOnsen || undefined;
+    place.hasSauna = blob.includes("사우나") || blob.includes("찜질") || undefined;
+    places.push(place);
+  }
+  return {
+    places,
+    stats: {
+      stayCount: items.length,
+      stayWithOnsen: places.filter((p) => p.hasOnsen).length,
+      stayTitles: places.slice(0, 5).map((p) => p.name),
+    },
+  };
+}
+
+const CATEGORIES = [
+  { key: "food", contentTypeId: "39", type: "restaurant", build: buildFood },
+  { key: "attr", contentTypeId: "12", type: "attraction", build: buildAttr },
+  { key: "stay", contentTypeId: "32", type: "lodging", build: buildStay },
+];
+
+// 기존 seed.enriched.ts의 지역별 데이터·요약·생성 시각 (JSON.stringify 결과라 그대로 파싱된다)
+function loadPrevious() {
+  if (!existsSync(OUT)) return { enrichedPlaces: {}, enrichedSummary: [], generatedAt: null, ok: true };
+  const src = readFileSync(OUT, "utf8");
+  const generatedAt = src.match(/^\/\/ auto-generated by .* — (\S+)$/m)?.[1] ?? null;
+  try {
+    return {
+      enrichedPlaces: JSON.parse(src.match(/export const enrichedPlaces[^=]*=\s*([\s\S]*?);\s*\/\/ 수집 요약/)[1]),
+      enrichedSummary: JSON.parse(src.match(/export const enrichedSummary\s*=\s*([\s\S]*?);\s*$/)[1]),
+      generatedAt,
+      ok: true,
+    };
+  } catch (e) {
+    console.warn("기존 seed.enriched.ts 해석 실패 — 전 지역을 새로 받은 경우에만 덮어씀:", e.message);
+    return { enrichedPlaces: {}, enrichedSummary: [], generatedAt, ok: false };
+  }
+}
+
+// 실패했거나 0건인 지역·분류는 기존 장소와 요약 값을 그대로 옮긴다
+function keepPrevious(prev, c, regionId) {
+  const places = (prev.enrichedPlaces[regionId] ?? []).filter((p) => p.type === c.type);
+  const prevStat = prev.enrichedSummary.find((s) => s.region === regionId) ?? {};
+  const stats = c.build([], regionId).stats; // 기존 요약이 없으면 0건
+  for (const k of Object.keys(stats)) if (k in prevStat) stats[k] = prevStat[k];
+  return { places, stats };
+}
+
+async function collect(prev) {
+  const stats = [];
+  const enrichedPlaces = {};
+  const kept = [];
+  const errors = [];
+  let fresh = 0;
+  // 사람이 조치해야 할 오류(키 만료 등) — 나머지 호출도 같은 결과이므로 발견 즉시 중단
+  let humanAction = KEY ? null : "TOURAPI_KEY 시크릿이 비어 있음";
+  let networkFails = 0; // 연속 연결 실패 수
+  for (const r of REGIONS) {
+    const parts = [];
+    const keptHere = [];
+    for (const c of CATEGORIES) {
+      let built = null;
+      if (!humanAction && networkFails < MAX_CONSECUTIVE_NETWORK_FAILS) {
+        try {
+          built = c.build(await fetchAll(r.areaCode, c.contentTypeId), r.id);
+          networkFails = 0;
+        } catch (e) {
+          console.warn(`${r.id} ${c.key} 실패`, e.message);
+          errors.push(`${r.id} ${c.key}: ${e.message}`);
+          if (e instanceof HumanActionError) humanAction = e.message;
+          networkFails = e instanceof NetworkError ? networkFails + 1 : 0;
+          if (networkFails === MAX_CONSECUTIVE_NETWORK_FAILS) console.warn(`연결 ${networkFails}회 연속 실패 — 남은 호출 생략`);
+        }
+      }
+      if (built && built.places.length > 0) { fresh++; parts.push(built); }
+      else { keptHere.push(c.key); parts.push(keepPrevious(prev, c, r.id)); }
+    }
+    // 지역 전체를 유지했으면 지역 id만, 일부면 "지역:분류"로 기록
+    if (keptHere.length === CATEGORIES.length) kept.push(r.id);
+    else kept.push(...keptHere.map((k) => `${r.id}:${k}`));
+    enrichedPlaces[r.id] = parts.flatMap((p) => p.places);
+    stats.push(Object.assign({ region: r.id }, ...parts.map((p) => p.stats)));
+  }
+  return { stats, enrichedPlaces, fresh, kept, errors, humanAction };
+}
+
+const prev = loadPrevious();
+const now = new Date();
+const total = REGIONS.length * CATEGORIES.length;
+const { stats, enrichedPlaces, fresh, kept, errors, humanAction } = await collect(prev);
+
+// 새로 받은 것이 하나라도 있으면 기록 (기존 파일을 해석하지 못했다면 전부 새로 받은 경우에만)
+const write = fresh > 0 && (prev.ok || fresh === total);
+if (write) {
+  const ts = `// auto-generated by scripts/sync-tourapi.mjs — ${now.toISOString()}
 // 하이브리드: 사우나/온천=curated(seed.ts), 맛집/볼거리/숙소=tourAPI 실데이터 보강(이 파일).
 // seed.ts가 이 파일을 optional import하여 지역별 places에 병합합니다.
 import type { Place } from "./schema";
@@ -162,6 +318,39 @@ export const enrichedPlaces: Record<string, Place[]> = ${JSON.stringify(enriched
 // 수집 요약 (모니터링/디버그용)
 export const enrichedSummary = ${JSON.stringify(stats, null, 2)};
 `;
-writeFileSync(OUT, ts);
-console.log("생성 완료:", OUT);
-console.log(JSON.stringify(stats, null, 2));
+  writeFileSync(OUT, ts);
+  console.log("생성 완료:", OUT);
+  console.log(JSON.stringify(stats, null, 2));
+} else {
+  console.log(`새로 받은 데이터 없음 — ${OUT} 유지 (마지막 성공 ${prev.generatedAt ?? "알 수 없음"})`);
+}
+
+// ── 결과 판정·기록 ──
+const lastSuccessAt = write ? now.toISOString() : prev.generatedAt;
+const daysSinceSuccess = lastSuccessAt ? (now - new Date(lastSuccessAt)) / 86_400_000 : 0;
+const result = humanAction ? "key_error" : fresh === total ? "ok" : write ? "partial" : "failed";
+let alert = null;
+if (humanAction) alert = `TourAPI ${humanAction}`;
+else if (!write && daysSinceSuccess >= STALE_ALERT_DAYS) {
+  alert = `TourAPI 동기화가 ${Math.floor(daysSinceSuccess)}일째 전 지역 실패 (마지막 성공 ${lastSuccessAt})`;
+}
+
+// 상태 파일은 공개 레포에 커밋될 수 있으므로 키가 섞이지 않게 가린다
+const redact = (s) => (KEY ? s.split(KEY).join("***").split(encodeURIComponent(KEY)).join("***") : s);
+const status = {
+  lastAttemptAt: now.toISOString(),
+  result,
+  lastSuccessAt,
+  fresh: `${fresh}/${total}`,
+  kept,
+  errors,
+  alert,
+};
+writeFileSync(STATUS_OUT, redact(JSON.stringify(status, null, 2)) + "\n");
+
+console.log(`결과: ${result} — 새로 받음 ${fresh}/${total}, 기존 유지 ${kept.join(", ") || "없음"}`);
+if (alert) console.log(`사람 조치 필요: ${redact(alert)}`);
+else if (result !== "ok") console.log(`::warning::tourAPI 동기화 ${result} (${fresh}/${total}) — 기존 데이터 유지, 다음 주 재시도`);
+if (process.env.GITHUB_OUTPUT) {
+  appendFileSync(process.env.GITHUB_OUTPUT, `result=${result}\nalert=${redact(alert ?? "").replace(/\s+/g, " ")}\n`);
+}

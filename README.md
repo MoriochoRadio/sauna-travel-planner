@@ -78,6 +78,15 @@ npm run test:e2e   # Playwright E2E (10개 시나리오)
 2. 환경변수 등록: `KAKAO_REST_KEY`, `TOURAPI_KEY`(선택)
 3. Deploy → 서버리스 Function(`/api/course`, `/api/places`) 자동 동작
 
+### tourAPI 주간 동기화
+
+`sync-tourapi.yml`이 매주 월요일 `scripts/sync-tourapi.mjs`로 맛집·볼거리·숙소(`src/data/seed.enriched.ts`)를 갱신해 커밋하고, Vercel이 재배포한다. 사람이 챙길 일은 키 연장뿐이다.
+
+- **실패해도 사이트는 그대로**: 연결 오류·429·5xx는 백오프로 재시도한다. 그래도 실패했거나 0건인 지역·분류는 기존 데이터를 유지하고, 전부 실패하면 파일을 쓰지 않는다.
+- **알림은 조치가 필요할 때만**: 키 오류(만료·미등록·쿼터 초과 등)나 약 3주 연속 전체 실패일 때만 워크플로가 실패해 GitHub 메일이 온다. 일시 네트워크 오류는 경고만 남긴다.
+- **상태 기록**: `src/data/sync-status.json`(마지막 시도 시각·결과·유지한 지역). 데이터가 바뀔 때 함께 커밋하고, 커밋이 50일 넘게 없으면 이 파일만 커밋해 예약 워크플로가 60일 비활성 규칙으로 꺼지지 않게 한다.
+- **키 연장**(개발계정 활용기간, 통상 2년): data.go.kr → 마이페이지 → 개발계정 → 활용기간 연장 신청. 키 값이 바뀌었으면 GitHub Secrets(와 등록했다면 Vercel env)의 `TOURAPI_KEY`를 갱신하고, Actions에서 워크플로를 수동 실행해 확인한다.
+
 ## 🔒 보안 상태
 
 `npm audit --omit=dev` 기준으로 관리한다. 마지막 점검일은 2026-08-18.

@@ -20,7 +20,9 @@ async function search(areaCode, keyword) {
 for (const [code, name] of [["1", "서울"], ["6", "부산"]]) {
   try {
     const items = await search(code, "사우나");
-    console.log(`[OK] ${name} searchKeyword2 → ${items.length}건`);
+    // 0건은 실패로 보지 않는다 — 이 API는 현재 0건을 계속 돌려주고, 런타임은 카카오/curated로 동작한다
+    if (items.length === 0) console.log(`::warning::${name} searchKeyword2 → 0건 (tourAPI 사우나 키워드 검색 결과 없음)`);
+    else console.log(`[OK] ${name} searchKeyword2 → ${items.length}건`);
     items.slice(0, 3).forEach((i) => console.log(`   - ${i.title} | ${i.addr1 ?? ""}`));
   } catch (e) {
     console.error(`[FAIL] ${name}:`, e.message);

@@ -8,6 +8,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
@@ -16,20 +17,48 @@ jobs:
       - name: Node 설정
         uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
 
+      # 실패한 지역·분류는 기존 데이터를 유지하고 exit 0. 사람이 봐야 할 사유만 outputs.alert로 넘긴다.
       - name: tourAPI 동기화
+        id: sync
         env:
           TOURAPI_KEY: ${{ secrets.TOURAPI_KEY }}
         run: node scripts/sync-tourapi.mjs
 
+      # 참고용 실증 — 0건·일시 오류가 커밋과 알림을 막지 않도록 실패해도 넘어간다
       - name: searchKeyword2 검증 (런타임 API 실증)
+        continue-on-error: true
         env:
           TOURAPI_KEY: ${{ secrets.TOURAPI_KEY }}
         run: node scripts/test-searchkeyword.mjs
 
+      # 데이터가 바뀌면 상태 파일도 같이 커밋한다. 안 바뀌었으면 마지막 커밋이 50일 이상 전일 때만
+      # 상태 파일을 커밋해 레포 활동을 남긴다 (공개 레포는 60일간 활동이 없으면 예약 워크플로가 꺼짐).
+      - name: 상태 파일 커밋 여부 결정
+        id: status
+        run: |
+          if git diff --quiet -- src/data/seed.enriched.ts; then
+            age=$(( ($(date +%s) - $(git log -1 --format=%ct)) / 86400 ))
+            if [ "$age" -ge 50 ]; then
+              echo "마지막 커밋이 ${age}일 전 — 예약 워크플로 비활성화 방지를 위해 상태 파일 커밋"
+              echo "message=chore: tourAPI 동기화 상태 기록 (${age}일간 커밋 없음)" >> "$GITHUB_OUTPUT"
+            else
+              git checkout -- src/data/sync-status.json 2>/dev/null || rm -f src/data/sync-status.json
+            fi
+          fi
+
       - name: 커밋 (변경 시)
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: "data: tourAPI 자동 보강 (주간 동기화)"
-          file_pattern: "src/data/seed.enriched.ts"
+          commit_message: "${{ steps.status.outputs.message || 'data: tourAPI 자동 보강 (주간 동기화)' }}"
+          file_pattern: "src/data/seed.enriched.ts src/data/sync-status.json"
+
+      # 키 오류·3주 연속 전체 실패처럼 사람이 봐야 할 때만 실패 처리 → GitHub 실패 메일
+      - name: 사람 조치 필요 시 알림
+        if: ${{ !cancelled() && steps.sync.outputs.alert != '' }}
+        env:
+          ALERT: ${{ steps.sync.outputs.alert }}
+        run: |
+          echo "::error::${ALERT} — 사이트는 마지막 정상 데이터로 동작 중. 키 연장: data.go.kr → 마이페이지 → 개발계정 → (국문 관광정보 서비스) 활용기간 연장 신청. 키 값이 바뀌었으면 Secrets의 TOURAPI_KEY도 갱신한 뒤 이 워크플로를 수동 실행해 확인"
+          exit 1

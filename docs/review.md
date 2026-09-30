@@ -43,7 +43,7 @@
 - **seed.ts**: 18곳(17시도 + 경주) curated, 각 region 숙소 1~2곳 포함.
 - **kakao.ts**: 로컬 검색 REST API(키 필요, 무료). `hasOnsen`/`hasSauna` 추론, `computeRating`으로 추천지수 산출.
 - **sigungu.generated.ts**: 230개 시군구 좌표 자동 생성.
-- **sync-tourapi.mjs + sync-tourapi.yml**: 주간 월요일 크론(TOURAPI_KEY 등록 시 동작).
+- **sync-tourapi.mjs + sync-tourapi.yml**: 주간 월요일 크론(TOURAPI_KEY 등록 시 동작). 실패한 지역·분류는 기존 데이터를 유지하고, 키 오류·3주 연속 전체 실패일 때만 워크플로 실패로 알림(README "tourAPI 주간 동기화").
 
 ### 보안
 - **.gitignore**: `.env`, `.env*.local`, `.hermes/`, `test-results/`, `playwright-report/` 차단.
@@ -62,7 +62,7 @@
 ## ⚠️ 알려진 이슈 / 잔여 과제
 
 1. **무료 모델 rate-limit**: OpenRouter 무료 티어 레이트리밋으로 간헐적 AI 생성 지연. 폴백 견고해 체감 영향 없음.
-2. **TOURAPI_KEY 미등록**: GitHub Secrets / Vercel env 미등록 → 주간 동기화 워크플로우 미동작(선택 사항).
+2. **TOURAPI_KEY 활용기간**: 2026-07 등록. 개발계정 활용기간(통상 2년)이 끝나면 data.go.kr에서 연장해야 한다. 만료돼도 사이트는 마지막 정상 데이터로 동작하고 동기화 워크플로가 실패 메일로 알린다.
 3. **카카오 REST 키 교체**: 스크립트에 하드코딩돼 있던 키는 코드에서 제거(환경변수만 사용). 키 자체는 git 이력에 남아 있어 카카오 콘솔에서 재발급 필요.
 4. **다크모드**: 보류 (사용자 선택). 필요시 추가.
 5. **저평점 장소 완전 배제는 아님**: `score()`에 추천지수(rating)를 반영해 저평점은 자연 감점되지만, 재고가 부족한 지역(예: 사우나 3곳뿐인 지역)은 중복 배치 방지가 우선이라 낮은 평점(예: 2.9) 장소도 배치될 수 있음. 의도된 동작(반복 배치보다 낫다는 판단)이지만 재고가 늘면 재검토 여지 있음.

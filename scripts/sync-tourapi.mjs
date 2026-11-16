@@ -9,37 +9,26 @@
 //   사람이 조치해야 할 때(키 오류, 3주 연속 전체 실패)만 GITHUB_OUTPUT `alert`에 사유를 남기고,
 //   워크플로 마지막 단계가 이를 실패로 올린다. 일시 네트워크 오류는 경고만 남긴다.
 //   처리된 실패는 exit 0 (커밋·알림 단계가 이어서 돌도록). 예상 못 한 예외만 exit 1.
+//   이번에 받은 곳이 기존보다 적으면 기존 장소로 채워 지역·분류별 저장 수가 줄지 않게 한다.
+//
+// 지역 조건은 법정동 코드(lDongRegnCd/lDongSignguCd) — 시도 코드는 ldongCode2에서 이름으로 찾는다.
+// 지역 정의·좌표 검사는 sync-tourapi-lib.mjs.
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import {
+  REGIONS, FALLBACK_SIDO_CODES, cityOf, acceptsCity, resolveRegionQueries, parseAnchors, coordProblem,
+} from "./sync-tourapi-lib.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(__dirname, "../src/data/seed.enriched.ts");
 const STATUS_OUT = resolve(__dirname, "../src/data/sync-status.json");
+const SIGUNGU_SRC = resolve(__dirname, "../src/data/sigungu.generated.ts");
 const KEY = process.env.TOURAPI_KEY;
 // 로컬 검증용 재정의 (예: 존재하지 않는 호스트로 네트워크 실패 재현)
 const BASE = process.env.TOURAPI_BASE || "https://apis.data.go.kr/B551011/KorService2";
-
-// 앱의 18개 region 전부 (src/data/schema.ts Region). query = areaBasedList2 지역 조건.
-// 경주는 경북(areaCode 35) 전체를 받으면 상주·경산 등이 섞이므로 경주시로 한정한다.
-//   법정동 코드(경북 47, 경주시 47130)로 조회하고, 조건이 무시되더라도 주소로 한 번 더 거른다(onlyCity).
-const REGIONS = [
-  { id: "seoul", query: { areaCode: "1" } }, { id: "incheon", query: { areaCode: "2" } },
-  { id: "daejeon", query: { areaCode: "3" } }, { id: "daegu", query: { areaCode: "4" } },
-  { id: "gwangju", query: { areaCode: "5" } }, { id: "busan", query: { areaCode: "6" } },
-  { id: "ulsan", query: { areaCode: "7" } }, { id: "sejong", query: { areaCode: "8" } },
-  { id: "gyeonggi", query: { areaCode: "31" } }, { id: "gangwon", query: { areaCode: "32" } },
-  { id: "chungbuk", query: { areaCode: "33" } }, { id: "chungnam", query: { areaCode: "34" } },
-  { id: "gyeongbuk", query: { areaCode: "35" } }, { id: "gyeongnam", query: { areaCode: "36" } },
-  { id: "jeonbuk", query: { areaCode: "37" } }, { id: "jeonnam", query: { areaCode: "38" } },
-  { id: "jeju", query: { areaCode: "39" } },
-  { id: "gyeongju", query: { lDongRegnCd: "47", lDongSignguCd: "130" }, onlyCity: "경주시" },
-];
-
-// 주소 "경상북도 경주시 …" → 두 번째 토큰(시군구)
-const cityOf = (addr) => (addr || "").trim().split(/\s+/)[1];
 
 // ── 호출 정책 ──
 // GitHub 러너 → apis.data.go.kr 연결이 간헐적으로 10초(fetch 기본 연결 타임아웃)를 넘겨
@@ -119,20 +108,71 @@ async function request(op, params) {
   }
 }
 
+const itemsOf = (json) => {
+  const raw = json?.response?.body?.items?.item;
+  return !raw ? [] : Array.isArray(raw) ? raw : [raw];
+};
+
 // arrange C = 최근 수정순. 제목 가나다순이면 "가"로 시작하는 곳만 뽑혀 지역 대표성이 없다.
-async function fetchAll(query, contentTypeId) {
-  const out = [];
-  for (let page = 1; page <= 5; page++) {
-    const json = await request("areaBasedList2", {
-      numOfRows: "100", pageNo: String(page), arrange: "C", ...query, contentTypeId,
-    });
-    const raw = json?.response?.body?.items?.item;
-    if (!raw) break;
-    const arr = Array.isArray(raw) ? raw : [raw];
-    for (const it of arr) if (it.title) out.push(it);
-    if (arr.length < 100) break;
+// 광주·전남이 통합 시도 코드 하나를 같이 쓰면 같은 조회가 두 번 나오므로 실행 중에는 결과를 재사용한다.
+const fetchCache = new Map();
+function fetchAll(query, contentTypeId) {
+  const params = { lDongRegnCd: query.lDongRegnCd, ...(query.lDongSignguCd ? { lDongSignguCd: query.lDongSignguCd } : {}) };
+  const key = JSON.stringify([params, contentTypeId]);
+  if (!fetchCache.has(key)) {
+    const p = (async () => {
+      const out = [];
+      for (let page = 1; page <= 5; page++) {
+        const json = await request("areaBasedList2", {
+          numOfRows: "100", pageNo: String(page), arrange: "C", ...params, contentTypeId,
+        });
+        const arr = itemsOf(json);
+        if (arr.length === 0) break;
+        for (const it of arr) if (it.title) out.push(it);
+        if (arr.length < 100) break;
+      }
+      return out;
+    })();
+    p.catch(() => fetchCache.delete(key)); // 실패한 조회는 다음 지역에서 다시 시도
+    fetchCache.set(key, p);
   }
-  return out;
+  return fetchCache.get(key);
+}
+
+// 법정동 시도 목록(ldongCode2, lDongRegnCd 생략 = 시도 목록) → 지역별 조회 조건.
+// 키 오류는 그대로 올리고(사람 조치), 그 밖의 실패·빈 응답이면 내장 표로 대신한다.
+async function resolveLdong() {
+  let list = [];
+  let source = "ldongCode2";
+  try {
+    list = itemsOf(await request("ldongCode2", { numOfRows: "100", pageNo: "1", lDongListYn: "N" }))
+      .filter((i) => i.code && i.name);
+  } catch (e) {
+    if (e instanceof HumanActionError) throw e;
+    console.warn(`법정동 코드 조회(ldongCode2) 실패 — 내장 코드표 사용: ${e.message}`);
+  }
+  if (list.length === 0) {
+    source = "내장 코드표";
+    list = Object.entries(FALLBACK_SIDO_CODES).map(([name, code]) => ({ code, name }));
+  }
+  const { queries, missing } = resolveRegionQueries(list);
+  console.log(`법정동 시도 코드 (${source}, 시도 ${list.length}곳): ${list.map((s) => `${s.code}=${s.name}`).join(", ")}`);
+  for (const r of REGIONS) {
+    const q = queries[r.id];
+    if (!q) continue;
+    const scope = r.cities ? ` · 주소 시군구 ${r.cities.join("/")}만` : r.excludeCities ? ` · ${r.excludeCities.join("/")} 제외` : "";
+    console.log(`   ${r.id} → lDongRegnCd=${q.lDongRegnCd}${q.lDongSignguCd ? ` lDongSignguCd=${q.lDongSignguCd}` : ""} (${q.sidoName}${scope})`);
+  }
+  for (const id of missing) {
+    console.warn(`   ${id} → 시도 이름 후보(${REGIONS.find((r) => r.id === id).sido.join("/")})가 목록에 없음 — 이 지역은 기존 데이터 유지`);
+  }
+  return { queries, missing, source };
+}
+
+// 좌표 검사 기준점 (시군구 중심점). 못 읽으면 대한민국 범위 검사만 한다.
+function loadAnchors() {
+  try { return parseAnchors(readFileSync(SIGUNGU_SRC, "utf8")); }
+  catch (e) { console.warn(`시군구 중심점(${SIGUNGU_SRC}) 읽기 실패 — 좌표는 대한민국 범위만 검사: ${e.message}`); return {}; }
 }
 
 // areaBasedList2 응답에 mapx/mapy/homepage가 이미 포함되므로 detailCommon2 호출 불필요
@@ -256,37 +296,81 @@ function loadPrevious() {
   }
 }
 
-// 실패했거나 0건인 지역·분류는 기존 장소와 요약 값을 그대로 옮긴다
-// (경주처럼 시군구를 한정한 지역은 예전에 섞여 들어온 다른 시군구 장소를 여기서 걸러낸다)
-function keepPrevious(prev, c, r) {
-  const regionId = r.id;
-  const places = (prev.enrichedPlaces[regionId] ?? [])
+// 기존 파일에서 이 지역·분류로 아직 쓸 수 있는 장소
+// (경주·광주·전남처럼 주소로 나누는 지역은 예전에 섞여 들어온 다른 시군구 장소를, 좌표가 이상한 장소는
+//  여기서 걸러낸다 — 유지·보충하면서 오래된 오류를 되살리지 않도록)
+function previousPlaces(prev, c, r, anchors) {
+  return (prev.enrichedPlaces[r.id] ?? [])
     .filter((p) => p.type === c.type)
-    .filter((p) => !r.onlyCity || cityOf(p.address ?? p.city) === r.onlyCity);
-  const prevStat = prev.enrichedSummary.find((s) => s.region === regionId) ?? {};
-  const stats = c.build([], regionId).stats; // 기존 요약이 없으면 0건
+    .filter((p) => acceptsCity(r, p.address ?? p.city))
+    .filter((p) => !coordProblem(p.lat, p.lng, r.id, anchors));
+}
+
+// 실패했거나 0건인 지역·분류는 기존 장소와 요약 값을 그대로 옮긴다
+function keepPrevious(prev, c, r, anchors) {
+  const places = previousPlaces(prev, c, r, anchors);
+  const prevStat = prev.enrichedSummary.find((s) => s.region === r.id) ?? {};
+  const stats = c.build([], r.id).stats; // 기존 요약이 없으면 0건
   for (const k of Object.keys(stats)) if (k in prevStat) stats[k] = prevStat[k];
   return { places, stats };
 }
 
-async function collect(prev) {
+// 이번에 받은 곳이 기존 저장 수보다 적으면, 새 목록에 없는 기존 장소로 원래 수까지 채운다.
+// (API가 한 번 적게 돌려줬다고 사이트의 장소가 줄지 않게. 요약 수치는 실제 응답 그대로 둔다)
+// id는 지역·분류 안에서 1부터 다시 매긴다 — seed.ts는 같은 id를 만나면 뒤의 것을 버린다.
+const ID_PREFIX = { restaurant: "food", lodging: "stay", attraction: "att" };
+function topUp(fresh, previous, regionId, type) {
+  const names = new Set(fresh.map((p) => p.name));
+  const extra = previous.filter((p) => !names.has(p.name)).slice(0, Math.max(0, previous.length - fresh.length));
+  const places = [...fresh, ...extra].map((p, i) => ({ ...p, id: `${regionId}-${ID_PREFIX[type]}-api-${i + 1}` }));
+  return { places, added: extra.length };
+}
+
+// 요약 수치 이전→이번 (예: "attrCount 183→366")
+const fmtDelta = (prevStat, stat) => Object.entries(stat)
+  .filter(([, v]) => typeof v === "number")
+  .map(([k, v]) => `${k} ${prevStat[k] ?? "-"}→${v}`).join(", ");
+
+async function collect(prev, anchors) {
   const stats = [];
   const enrichedPlaces = {};
   const kept = [];
   const errors = [];
+  const coordSkipped = [];
+  const toppedUp = [];
   let fresh = 0;
   // 사람이 조치해야 할 오류(키 만료 등) — 나머지 호출도 같은 결과이므로 발견 즉시 중단
   let humanAction = KEY ? null : "TOURAPI_KEY 시크릿이 비어 있음";
   let networkFails = 0; // 연속 연결 실패 수
+  let ldong = { queries: {}, missing: REGIONS.map((r) => r.id), source: "조회 안 함" };
+  if (!humanAction) {
+    try { ldong = await resolveLdong(); }
+    catch (e) { humanAction = e.message; errors.push(`ldongCode2: ${e.message}`); }
+  }
+  for (const id of ldong.missing) if (!humanAction) errors.push(`${id}: 법정동 시도 코드를 찾지 못함`);
+
   for (const r of REGIONS) {
     const parts = [];
     const keptHere = [];
+    const query = ldong.queries[r.id];
+    const prevStat = prev.enrichedSummary.find((s) => s.region === r.id) ?? {};
     for (const c of CATEGORIES) {
+      const before = previousPlaces(prev, c, r, anchors);
       let built = null;
-      if (!humanAction && networkFails < MAX_CONSECUTIVE_NETWORK_FAILS) {
+      let received = 0;
+      let skipped = 0;
+      if (query && !humanAction && networkFails < MAX_CONSECUTIVE_NETWORK_FAILS) {
         try {
-          const items = (await fetchAll(r.query, c.contentTypeId))
-            .filter((i) => !r.onlyCity || cityOf(i.addr1) === r.onlyCity);
+          const all = await fetchAll(query, c.contentTypeId);
+          const items = all.filter((i) => acceptsCity(r, i.addr1)).filter((i) => {
+            const problem = coordProblem(i.mapy ? Number(i.mapy) : undefined, i.mapx ? Number(i.mapx) : undefined, r.id, anchors);
+            if (!problem) return true;
+            skipped++;
+            coordSkipped.push(`${r.id}:${c.key} ${i.title} (${i.mapy},${i.mapx}) ${problem}`);
+            console.warn(`   ⚠ 좌표 이상 제외 ${r.id} ${c.key} "${i.title}" (${i.mapy}, ${i.mapx}) — ${problem}`);
+            return false;
+          });
+          received = items.length;
           built = c.build(items, r.id);
           networkFails = 0;
         } catch (e) {
@@ -297,8 +381,21 @@ async function collect(prev) {
           if (networkFails === MAX_CONSECUTIVE_NETWORK_FAILS) console.warn(`연결 ${networkFails}회 연속 실패 — 남은 호출 생략`);
         }
       }
-      if (built && built.places.length > 0) { fresh++; parts.push(built); }
-      else { keptHere.push(c.key); parts.push(keepPrevious(prev, c, r)); }
+      let note;
+      if (built && built.places.length > 0) {
+        fresh++;
+        const { places, added } = topUp(built.places, before, r.id, c.type);
+        if (added > 0) toppedUp.push(`${r.id}:${c.key}+${added}`);
+        parts.push({ places, stats: built.stats });
+        note = `저장 ${before.length}→${places.length}곳 (새로 ${built.places.length}${added ? ` + 기존 보충 ${added}` : ""})`;
+      } else {
+        keptHere.push(c.key);
+        const k = keepPrevious(prev, c, r, anchors);
+        parts.push(k);
+        note = `저장 ${before.length}→${k.places.length}곳 (${built ? "0건" : "조회 못 함"} — 기존 유지)`;
+      }
+      // 다음 실행과 비교할 수 있도록 지역·분류마다 한 줄: 요약 수치(이전→이번)와 저장 장소 수
+      console.log(`[${r.id}] ${c.key}: 응답 ${built ? `${received}건` : "-"}${skipped ? ` (좌표 이상 ${skipped}곳 제외)` : ""} · 요약 ${fmtDelta(prevStat, parts.at(-1).stats)} · ${note}`);
     }
     // 지역 전체를 유지했으면 지역 id만, 일부면 "지역:분류"로 기록
     if (keptHere.length === CATEGORIES.length) kept.push(r.id);
@@ -306,13 +403,14 @@ async function collect(prev) {
     enrichedPlaces[r.id] = parts.flatMap((p) => p.places);
     stats.push(Object.assign({ region: r.id }, ...parts.map((p) => p.stats)));
   }
-  return { stats, enrichedPlaces, fresh, kept, errors, humanAction };
+  return { stats, enrichedPlaces, fresh, kept, errors, humanAction, coordSkipped, toppedUp, ldongSource: ldong.source };
 }
 
 const prev = loadPrevious();
 const now = new Date();
 const total = REGIONS.length * CATEGORIES.length;
-const { stats, enrichedPlaces, fresh, kept, errors, humanAction } = await collect(prev);
+const { stats, enrichedPlaces, fresh, kept, errors, humanAction, coordSkipped, toppedUp, ldongSource } =
+  await collect(prev, loadAnchors());
 
 // 새로 받은 것이 하나라도 있으면 기록 (기존 파일을 해석하지 못했다면 전부 새로 받은 경우에만)
 const write = fresh > 0 && (prev.ok || fresh === total);
@@ -352,13 +450,17 @@ const status = {
   result,
   lastSuccessAt,
   fresh: `${fresh}/${total}`,
+  ldong: ldongSource,   // 법정동 시도 코드 출처: ldongCode2 | 내장 코드표
   kept,
+  toppedUp,             // 새로 받은 곳이 적어 기존 장소로 채운 "지역:분류+수"
+  coordSkipped,         // 좌표가 이상해 저장하지 않은 장소
   errors,
   alert,
 };
 writeFileSync(STATUS_OUT, redact(JSON.stringify(status, null, 2)) + "\n");
 
-console.log(`결과: ${result} — 새로 받음 ${fresh}/${total}, 기존 유지 ${kept.join(", ") || "없음"}`);
+console.log(`결과: ${result} — 새로 받음 ${fresh}/${total}, 기존 유지 ${kept.join(", ") || "없음"}, ` +
+  `기존 보충 ${toppedUp.join(", ") || "없음"}, 좌표 이상 제외 ${coordSkipped.length}곳 (법정동 코드: ${ldongSource})`);
 if (alert) console.log(`사람 조치 필요: ${redact(alert)}`);
 else if (result !== "ok") console.log(`::warning::tourAPI 동기화 ${result} (${fresh}/${total}) — 기존 데이터 유지, 다음 주 재시도`);
 if (process.env.GITHUB_OUTPUT) {

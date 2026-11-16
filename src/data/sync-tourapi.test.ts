@@ -1,75 +1,133 @@
 // scripts/sync-tourapi.mjs를 모의 tourAPI 서버에 붙여 실제로 실행해 본다.
 // 실제 키·실제 호출 없이 요청 파라미터와 생성 파일을 검증한다 (임시 폴더에 복사해서 실행).
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 import { spawn } from "node:child_process";
-import { createServer, type Server } from "node:http";
+import { createServer } from "node:http";
 import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AddressInfo } from "node:net";
 import { ALL_REGIONS } from "./schema";
+import { GENERATED_SIGUNGUS } from "./sigungu.generated";
 
 type Item = { title: string; addr1: string; mapx?: string; mapy?: string };
-const item = (title: string, addr1: string): Item => ({ title, addr1, mapx: "127.0", mapy: "37.5" });
+type Sido = { rnum: number; code: string; name: string };
+type StoredPlace = { id: string; name: string; city: string; type: string; sigungu?: string; lat?: number; lng?: number };
+type Status = { result: string; fresh: string; ldong: string; kept: string[]; toppedUp: string[]; coordSkipped: string[]; errors: string[] };
 
-// 요청 조건별 모의 응답
-function respond(q: URLSearchParams): Item[] {
+// ── 법정동 시도 목록 픽스처 (ldongCode2 응답 형식: rnum·code·name) ──
+// 통합 이전 값은 관광공사 매뉴얼 v4.4 표. 통합 코드 "90"은 테스트용 가짜 값이다 —
+// 실제 값은 스크립트가 실행할 때 ldongCode2에서 이름으로 찾는다.
+const PRE_MERGE: [string, string][] = [
+  ["11", "서울특별시"], ["26", "부산광역시"], ["27", "대구광역시"], ["28", "인천광역시"], ["29", "광주광역시"],
+  ["30", "대전광역시"], ["31", "울산광역시"], ["36", "세종특별자치시"], ["41", "경기도"], ["43", "충청북도"],
+  ["44", "충청남도"], ["46", "전라남도"], ["47", "경상북도"], ["48", "경상남도"], ["50", "제주특별자치도"],
+  ["51", "강원특별자치도"], ["52", "전북특별자치도"],
+];
+const MERGED_CODE = "90";
+const MERGED: [string, string][] = [
+  ...PRE_MERGE.filter(([c]) => c !== "29" && c !== "46"), [MERGED_CODE, "전남광주통합특별시"],
+];
+const sidoList = (pairs: [string, string][]): Sido[] => pairs.map(([code, name], i) => ({ rnum: i + 1, code, name }));
+
+// 시도 코드 → 그 지역 실제 시군구 중심점·주소 (좌표 검사를 통과하는 정상 응답을 만들기 위해)
+const SIDO_REGION: Record<string, string> = {
+  "11": "seoul", "26": "busan", "27": "daegu", "28": "incheon", "29": "gwangju", "30": "daejeon", "31": "ulsan",
+  "36": "sejong", "41": "gyeonggi", "43": "chungbuk", "44": "chungnam", "46": "jeonnam", "47": "gyeongbuk",
+  "48": "gyeongnam", "50": "jeju", "51": "gangwon", "52": "jeonbuk",
+};
+const SIDO_NAME = Object.fromEntries(PRE_MERGE.map(([c, n]) => [c, n]));
+function at(region: string, sigunguName: string | undefined, title: string, sidoName: string, dLat = 0): Item {
+  const s = GENERATED_SIGUNGUS.find((g) => g.region === region && (!sigunguName || g.name === sigunguName))!;
+  return { title, addr1: `${sidoName} ${s.name} 어느로 1`, mapy: String(s.lat + dLat), mapx: String(s.lng) };
+}
+
+// 요청 조건별 모의 응답 (areaBasedList2)
+function respondList(q: URLSearchParams): Item[] {
   const type = q.get("contentTypeId");
-  if (q.get("lDongSignguCd") === "130") {
+  const code = q.get("lDongRegnCd") ?? "";
+  if (code === "47" && q.get("lDongSignguCd") === "130") {
     // 경주: 숙소는 0건 → 기존 데이터 유지 경로. 나머지는 경주 + 조건을 벗어난 경산 1곳
     if (type === "32") return [];
     return [
-      item(`경주-${type}-1`, "경상북도 경주시 태종로 1"),
-      item(`경산-${type}-1`, "경상북도 경산시 중앙로 1"),
-      item(`경주-${type}-2`, "경상북도 경주시 보문로 2"),
+      { ...at("gyeongbuk", "경주시", `경주-${type}-1`, "경상북도"), addr1: "경상북도 경주시 태종로 1" },
+      { ...at("gyeongbuk", "경산시", `경산-${type}-1`, "경상북도"), addr1: "경상북도 경산시 중앙로 1" },
+      { ...at("gyeongbuk", "경주시", `경주-${type}-2`, "경상북도"), addr1: "경상북도 경주시 보문로 2" },
     ];
   }
-  if (q.get("areaCode") === "1" && type === "39") {
-    // 서울 맛집: 앞의 10곳이 전부 강남구 — 그대로 앞에서 8곳을 자르면 한 구에 몰린다
+  if (code === "11" && type === "39") {
+    // 서울 맛집: 앞의 10곳이 전부 강남구 — 그대로 앞에서 8곳을 자르면 한 구에 몰린다.
+    // 남중국해 좌표(2026-09 실제로 들어온 값) 1곳은 저장하지 않아야 한다.
     return [
-      ...Array.from({ length: 10 }, (_, i) => item(`강남-${i}`, `서울특별시 강남구 테헤란로 ${i}`)),
-      item("마포-0", "서울특별시 마포구 양화로 1"),
-      item("종로-0", "서울특별시 종로구 종로 1"),
+      { title: "김포공항 호텔", addr1: "서울특별시 강서구 하늘길 38", mapy: "19.69442748", mapx: "117.9925662504" },
+      ...Array.from({ length: 10 }, (_, i) => ({ ...at("seoul", "강남구", `강남-${i}`, "서울특별시"), addr1: `서울특별시 강남구 테헤란로 ${i}` })),
+      at("seoul", "마포구", "마포-0", "서울특별시"),
+      at("seoul", "종로구", "종로-0", "서울특별시"),
     ];
   }
-  const area = q.get("areaCode") ?? "?";
-  return [item(`${area}-${type}-a`, "어느도 어느시 1"), item(`${area}-${type}-b`, "어느도 저느시 2")];
+  if (code === "11" && type === "12") {
+    // 서울 볼거리: 한국 안이지만 부산 좌표 → 지역 거리 검사로 제외
+    return [at("seoul", "중구", "서울-12-a", "서울특별시"), { ...at("busan", "해운대구", "엉뚱한 좌표", "서울특별시"), addr1: "서울특별시 중구 세종대로 1" }];
+  }
+  if (code === "30" && type === "12") {
+    // 대전 볼거리: 이번엔 2곳만 → 기존 8곳보다 적으므로 기존 장소로 채운다
+    return [at("daejeon", "유성구", "대전-새1", "대전광역시"), at("daejeon", "동구", "대전-새2", "대전광역시")];
+  }
+  if (code === MERGED_CODE || code === "29" || code === "46") {
+    // 통합 시도 코드면 광주 구와 전남 시군이 한 목록에 섞여 온다
+    const sido = code === MERGED_CODE ? "전남광주통합특별시" : SIDO_NAME[code];
+    const gj = [at("gwangju", "광산구", `광주-${type}-a`, sido), at("gwangju", "동구", `광주-${type}-b`, sido)];
+    const jn = [at("jeonnam", "목포시", `전남-${type}-a`, sido), at("jeonnam", "신안군", `전남-${type}-b`, sido)];
+    return code === MERGED_CODE ? [...gj, ...jn] : code === "29" ? gj : jn;
+  }
+  const region = SIDO_REGION[code];
+  if (!region) return [];
+  return [at(region, undefined, `${code}-${type}-a`, SIDO_NAME[code]), at(region, undefined, `${code}-${type}-b`, SIDO_NAME[code], 0.01)];
 }
 
-// 이전 동기화 결과: 경주에 상주 숙소가 섞여 있던 상태
+const place = (p: Record<string, unknown>) => ({ summary: "", tags: [], priceLevel: "mid", avgDurationMin: 60, highlights: [], ...p });
+// 이전 동기화 결과: 경주에 상주 숙소, 강원에 남중국해 좌표 콘도, 대전에 볼거리 8곳이 있던 상태
 const PREV = `// auto-generated by scripts/sync-tourapi.mjs — 2026-09-28T00:00:00.000Z
 import type { Place } from "./schema";
 
 export const enrichedPlaces: Record<string, Place[]> = ${JSON.stringify({
   gyeongju: [
-    { id: "gyeongju-stay-api-1", name: "경주 숙소", type: "lodging", region: "gyeongju", city: "경상북도 경주시", address: "경상북도 경주시 보문로 1", summary: "", tags: [], priceLevel: "mid", avgDurationMin: 480, highlights: [] },
-    { id: "gyeongju-stay-api-2", name: "상주 숙소", type: "lodging", region: "gyeongju", city: "경상북도 상주시", address: "경상북도 상주시 경상대로 1", summary: "", tags: [], priceLevel: "mid", avgDurationMin: 480, highlights: [] },
+    place({ id: "gyeongju-stay-api-1", name: "경주 숙소", type: "lodging", region: "gyeongju", city: "경상북도 경주시", address: "경상북도 경주시 보문로 1", lat: 35.84, lng: 129.28 }),
+    place({ id: "gyeongju-stay-api-2", name: "상주 숙소", type: "lodging", region: "gyeongju", city: "경상북도 상주시", address: "경상북도 상주시 경상대로 1" }),
   ],
+  gangwon: [
+    place({ id: "gangwon-stay-api-1", name: "금강산콘도", type: "lodging", region: "gangwon", city: "강원특별자치도 고성군", address: "강원특별자치도 고성군 현내면 금강산로 416", lat: 19.69442748, lng: 117.9925662504 }),
+  ],
+  daejeon: Array.from({ length: 8 }, (_, i) =>
+    place({ id: `daejeon-att-api-${i + 1}`, name: `대전-기존${i + 1}`, type: "attraction", region: "daejeon", city: "대전광역시 유성구", address: `대전광역시 유성구 대학로 ${i}`, lat: 36.36, lng: 127.35 })),
 }, null, 2)};
 
 // 수집 요약 (모니터링/디버그용)
 export const enrichedSummary = [];
 `;
 
-let dir = "";
-let server: Server;
-const requests: URLSearchParams[] = [];
-let places: Record<string, { name: string; city: string; type: string; sigungu?: string }[]> = {};
-let status: { result: string; fresh: string; kept: string[] };
+interface Run { requests: URLSearchParams[]; places: Record<string, StoredPlace[]>; status: Status; stdout: string }
 
-beforeAll(async () => {
-  dir = mkdtempSync(join(tmpdir(), "sync-tourapi-"));
-  mkdirSync(join(dir, "scripts"));
-  mkdirSync(join(dir, "src", "data"), { recursive: true });
-  copyFileSync(fileURLToPath(new URL("../../scripts/sync-tourapi.mjs", import.meta.url)), join(dir, "scripts", "sync-tourapi.mjs"));
-  writeFileSync(join(dir, "src", "data", "seed.enriched.ts"), PREV);
-
-  server = createServer((req, res) => {
-    const q = new URL(req.url ?? "/", "http://mock").searchParams;
+// ldong: ldongCode2 응답 (null이면 파라미터 오류 응답 → 내장 코드표로 대신해야 한다)
+async function runSync(ldong: Sido[] | null): Promise<Run> {
+  const dir = mkdtempSync(join(tmpdir(), "sync-tourapi-"));
+  const requests: URLSearchParams[] = [];
+  const server = createServer((req, res) => {
+    const url = new URL(req.url ?? "/", "http://mock");
+    const q = url.searchParams;
     requests.push(q);
-    const items = respond(q);
     res.setHeader("Content-Type", "application/json");
+    if (url.pathname.endsWith("/ldongCode2")) {
+      if (!ldong) {
+        res.end(JSON.stringify({ resultCode: "10", resultMsg: "INVALID_REQUEST_PARAMETER_ERROR" }));
+        return;
+      }
+      res.end(JSON.stringify({ response: { header: { resultCode: "0000", resultMsg: "OK" }, body: { items: { item: ldong }, numOfRows: 100, pageNo: 1, totalCount: ldong.length } } }));
+      return;
+    }
+    // 삭제 예정인 옛 지역 조건으로 오면 빈 응답 (법정동 코드로만 받아야 한다)
+    const items = q.get("areaCode") ? [] : respondList(q);
     res.end(JSON.stringify({
       response: {
         header: { resultCode: "0000", resultMsg: "OK" },
@@ -77,63 +135,160 @@ beforeAll(async () => {
       },
     }));
   });
-  await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
-  const { port } = server.address() as AddressInfo;
+  try {
+    mkdirSync(join(dir, "scripts"));
+    mkdirSync(join(dir, "src", "data"), { recursive: true });
+    for (const f of ["sync-tourapi.mjs", "sync-tourapi-lib.mjs"]) {
+      copyFileSync(fileURLToPath(new URL(`../../scripts/${f}`, import.meta.url)), join(dir, "scripts", f));
+    }
+    copyFileSync(fileURLToPath(new URL("./sigungu.generated.ts", import.meta.url)), join(dir, "src", "data", "sigungu.generated.ts"));
+    writeFileSync(join(dir, "src", "data", "seed.enriched.ts"), PREV);
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    const { port } = server.address() as AddressInfo;
 
-  await new Promise<void>((done, fail) => {
-    const child = spawn(process.execPath, [join(dir, "scripts", "sync-tourapi.mjs")], {
-      env: { ...process.env, TOURAPI_KEY: "mock-key", TOURAPI_BASE: `http://127.0.0.1:${port}/svc`, GITHUB_OUTPUT: "" },
-      stdio: "ignore",
+    let stdout = "";
+    await new Promise<void>((done, fail) => {
+      const child = spawn(process.execPath, [join(dir, "scripts", "sync-tourapi.mjs")], {
+        env: { ...process.env, TOURAPI_KEY: "mock-key", TOURAPI_BASE: `http://127.0.0.1:${port}/svc`, GITHUB_OUTPUT: "" },
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      child.stdout.on("data", (c) => (stdout += c));
+      child.stderr.on("data", (c) => (stdout += c));
+      child.on("error", fail);
+      child.on("exit", (code) => (code === 0 ? done() : fail(new Error(`exit ${code}\n${stdout}`))));
     });
-    child.on("error", fail);
-    child.on("exit", (code) => (code === 0 ? done() : fail(new Error(`exit ${code}`))));
+
+    const out = readFileSync(join(dir, "src", "data", "seed.enriched.ts"), "utf8");
+    return {
+      requests,
+      places: JSON.parse(out.match(/export const enrichedPlaces[^=]*=\s*([\s\S]*?);\s*\/\/ 수집 요약/)![1]),
+      status: JSON.parse(readFileSync(join(dir, "src", "data", "sync-status.json"), "utf8")),
+      stdout,
+    };
+  } finally {
+    server.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const listReqs = (r: Run) => r.requests.filter((q) => q.has("contentTypeId"));
+const ofType = (r: Run, region: string, type: string) => r.places[region].filter((p) => p.type === type);
+const cities = (ps: StoredPlace[]) => new Set(ps.map((p) => p.city.split(" ")[1]));
+
+describe("sync-tourapi — 통합 시도 코드가 있는 법정동 목록 (2026-07 이후)", () => {
+  let run: Run;
+  beforeAll(async () => { run = await runSync(sidoList(MERGED)); }, 60_000);
+
+  test("앱의 18개 지역을 모두 동기화한다", () => {
+    expect(Object.keys(run.places).sort()).toEqual([...ALL_REGIONS].sort());
   });
 
-  const out = readFileSync(join(dir, "src", "data", "seed.enriched.ts"), "utf8");
-  places = JSON.parse(out.match(/export const enrichedPlaces[^=]*=\s*([\s\S]*?);\s*\/\/ 수집 요약/)![1]);
-  status = JSON.parse(readFileSync(join(dir, "src", "data", "sync-status.json"), "utf8"));
-}, 30_000);
+  test("삭제 예정인 areaCode가 아니라 ldongCode2에서 찾은 법정동 코드로 조회한다", () => {
+    expect(run.requests.some((q) => q.has("lDongListYn"))).toBe(true); // ldongCode2 호출
+    for (const q of listReqs(run)) {
+      expect(q.get("areaCode")).toBeNull();
+      expect(q.get("lDongRegnCd")).toMatch(/^\d+$/);
+    }
+    const codes = new Set(listReqs(run).map((q) => q.get("lDongRegnCd")));
+    expect(codes).toEqual(new Set(MERGED.map(([c]) => c)));
+    expect(run.status.ldong).toBe("ldongCode2");
+    expect(run.stdout).toContain(`gwangju → lDongRegnCd=${MERGED_CODE}`);
+  });
 
-afterAll(() => {
-  server?.close();
-  if (dir) rmSync(dir, { recursive: true, force: true });
-});
-
-describe("sync-tourapi — 모의 응답으로 실행", () => {
-  test("앱의 18개 지역을 모두 동기화한다", () => {
-    expect(Object.keys(places).sort()).toEqual([...ALL_REGIONS].sort());
-    const areaCodes = new Set(requests.map((q) => q.get("areaCode")).filter(Boolean));
-    expect(areaCodes.size).toBe(17);
+  test("광주·전남은 통합 코드 하나를 같이 쓰고(같은 조회는 한 번), 주소의 시군구로 나눈다", () => {
+    const merged = listReqs(run).filter((q) => q.get("lDongRegnCd") === MERGED_CODE);
+    expect(merged).toHaveLength(3); // 분류 3개 × 1회 — 광주·전남이 결과를 재사용
+    for (const t of ["restaurant", "attraction", "lodging"]) {
+      expect(cities(ofType(run, "gwangju", t))).toEqual(new Set(["광산구", "동구"]));
+      expect(cities(ofType(run, "jeonnam", t))).toEqual(new Set(["목포시", "신안군"]));
+    }
   });
 
   test("경주는 경북 전체가 아니라 경주시만 조회하고, 섞여 온 다른 시군구는 버린다", () => {
-    const gyeongjuReqs = requests.filter((q) => q.get("lDongSignguCd") === "130");
+    const gyeongjuReqs = listReqs(run).filter((q) => q.get("lDongSignguCd") === "130");
     expect(gyeongjuReqs.length).toBeGreaterThan(0);
-    for (const q of gyeongjuReqs) {
-      expect(q.get("lDongRegnCd")).toBe("47");
-      expect(q.get("areaCode")).toBeNull();
-    }
-    expect(places.gyeongju.length).toBeGreaterThan(0);
-    for (const p of places.gyeongju) expect(p.city).toBe("경상북도 경주시");
+    for (const q of gyeongjuReqs) expect(q.get("lDongRegnCd")).toBe("47");
+    expect(run.places.gyeongju.length).toBeGreaterThan(0);
+    for (const p of run.places.gyeongju) expect(p.city).toBe("경상북도 경주시");
   });
 
   test("0건이라 기존 데이터를 유지할 때도 경주 밖 장소는 걸러낸다", () => {
-    const stays = places.gyeongju.filter((p) => p.type === "lodging");
-    expect(stays.map((p) => p.name)).toEqual(["경주 숙소"]);
-    expect(status.kept).toContain("gyeongju:stay");
-    expect(status.fresh).toBe("53/54");
+    expect(ofType(run, "gyeongju", "lodging").map((p) => p.name)).toEqual(["경주 숙소"]);
+    expect(run.status.kept).toContain("gyeongju:stay");
+    expect(run.status.fresh).toBe("53/54");
+  });
+
+  test("좌표가 한국 밖이거나 지역에서 멀면 저장하지 않고 기록한다", () => {
+    const seoul = run.places.seoul.map((p) => p.name);
+    expect(seoul).not.toContain("김포공항 호텔");
+    expect(seoul).not.toContain("엉뚱한 좌표");
+    expect(run.status.coordSkipped).toHaveLength(2);
+    expect(run.status.coordSkipped.join("\n")).toMatch(/김포공항 호텔.*대한민국 범위 밖/);
+    expect(run.status.coordSkipped.join("\n")).toMatch(/엉뚱한 좌표.*지역 시군구에서 \d+km/);
+    expect(run.stdout).toContain("좌표 이상 제외 seoul food \"김포공항 호텔\"");
+    // 예전에 저장된 이상 좌표도 유지·보충으로 되살리지 않는다
+    expect(run.places.gangwon.map((p) => p.name)).not.toContain("금강산콘도");
+    for (const list of Object.values(run.places)) {
+      for (const p of list) if (p.lat != null) expect(p.lat).toBeGreaterThan(33);
+    }
+  });
+
+  test("새로 받은 곳이 기존보다 적으면 기존 장소로 채워 저장 수가 줄지 않는다 (id는 겹치지 않게 다시 매김)", () => {
+    const att = ofType(run, "daejeon", "attraction");
+    expect(att).toHaveLength(8);
+    expect(att.slice(0, 2).map((p) => p.name).sort()).toEqual(["대전-새1", "대전-새2"]);
+    expect(att.map((p) => p.id)).toEqual(Array.from({ length: 8 }, (_, i) => `daejeon-att-api-${i + 1}`));
+    expect(run.status.toppedUp).toContain("daejeon:attr+6");
+    expect(run.stdout).toContain("[daejeon] attr: 응답 2건");
+    expect(run.stdout).toContain("저장 8→8곳 (새로 2 + 기존 보충 6)");
+  });
+
+  test("지역·분류마다 요약 수치와 저장 수를 한 줄씩 남긴다", () => {
+    for (const r of ALL_REGIONS) for (const k of ["food", "attr", "stay"]) {
+      expect(run.stdout).toContain(`[${r}] ${k}: `);
+    }
+    expect(run.stdout).toMatch(/\[seoul\] food: 응답 12건 \(좌표 이상 1곳 제외\) · 요약 foodCount -→12 · 저장 0→8곳/);
   });
 
   test("가나다순 앞쪽이 아니라 최근 수정순으로 받고, 시군구를 번갈아 고른다", () => {
-    for (const q of requests) expect(q.get("arrange")).toBe("C");
-    const seoulFood = places.seoul.filter((p) => p.type === "restaurant");
+    for (const q of listReqs(run)) expect(q.get("arrange")).toBe("C");
+    const seoulFood = ofType(run, "seoul", "restaurant");
     expect(seoulFood).toHaveLength(8);
-    expect(new Set(seoulFood.map((p) => p.city))).toEqual(
-      new Set(["서울특별시 강남구", "서울특별시 마포구", "서울특별시 종로구"])
-    );
+    expect(cities(seoulFood)).toEqual(new Set(["강남구", "마포구", "종로구"]));
   });
 
   test("시군구 id는 쓰지 않는다 — seed.ts가 전국 목록으로 매핑한다", () => {
-    for (const list of Object.values(places)) for (const p of list) expect(p.sigungu).toBeUndefined();
+    for (const list of Object.values(run.places)) for (const p of list) expect(p.sigungu).toBeUndefined();
+  });
+
+  test("지역·분류 안에서 id가 겹치지 않는다", () => {
+    for (const list of Object.values(run.places)) expect(new Set(list.map((p) => p.id)).size).toBe(list.length);
   });
 });
+
+describe("sync-tourapi — 법정동 목록이 아직 통합 이전이면", () => {
+  let run: Run;
+  beforeAll(async () => { run = await runSync(sidoList(PRE_MERGE)); }, 60_000);
+
+  test("광주 29·전남 46으로 각자 받는다", () => {
+    const codes = new Set(listReqs(run).map((q) => q.get("lDongRegnCd")));
+    expect(codes).toEqual(new Set(PRE_MERGE.map(([c]) => c)));
+    expect(cities(ofType(run, "gwangju", "restaurant"))).toEqual(new Set(["광산구", "동구"]));
+    expect(cities(ofType(run, "jeonnam", "restaurant"))).toEqual(new Set(["목포시", "신안군"]));
+    expect(run.status.fresh).toBe("53/54");
+  });
+});
+
+describe("sync-tourapi — ldongCode2를 못 읽으면", () => {
+  let run: Run;
+  beforeAll(async () => { run = await runSync(null); }, 60_000);
+
+  test("내장 코드표(통합 이전 값)로 계속 받고, 출처를 상태 파일에 남긴다", () => {
+    expect(run.status.ldong).toBe("내장 코드표");
+    expect(run.stdout).toContain("법정동 코드 조회(ldongCode2) 실패 — 내장 코드표 사용");
+    const codes = new Set(listReqs(run).map((q) => q.get("lDongRegnCd")));
+    expect(codes).toEqual(new Set(PRE_MERGE.map(([c]) => c)));
+    expect(run.status.result).toBe("partial"); // 경주 숙소 0건
+  });
+});
+

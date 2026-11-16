@@ -68,7 +68,7 @@ npm run test:e2e   # Playwright E2E (11개 시나리오)
 | 게이트 | 상태 |
 |---|---|
 | 타입체크 | ✅ 0 error |
-| 단위 테스트 | ✅ 68 passed |
+| 단위 테스트 | ✅ 96 passed |
 | E2E (Playwright) | ✅ 11 passed |
 | 빌드 | ✅ 성공 |
 
@@ -82,22 +82,27 @@ npm run test:e2e   # Playwright E2E (11개 시나리오)
 
 `sync-tourapi.yml`이 매주 월요일 `scripts/sync-tourapi.mjs`로 맛집·볼거리·숙소(`src/data/seed.enriched.ts`)를 갱신해 커밋하고, Vercel이 재배포한다. 사람이 챙길 일은 키 연장뿐이다.
 
-- **대상**: 앱의 18개 지역 전부. 경주는 경북 전체가 아니라 경주시만(법정동 코드 47130, 주소로 한 번 더 거름) 받는다.
+- **대상**: 앱의 18개 지역 전부. 법정동 코드(`lDongRegnCd`)로 받는다 — `areaCode`는 공식 문서에서 삭제 예정이고 2026-10~11에 응답이 지역에 따라 절반 이하로 줄었다. 시도 코드는 실행마다 `ldongCode2`에서 이름으로 찾는다(못 읽으면 내장 코드표). 전남광주통합특별시 코드가 있으면 광주·전남은 그 코드 하나로 받아 주소의 시군구(광주 5개 구)로 나눈다. 경주는 경북 전체가 아니라 경주시만(법정동 47130, 주소로 한 번 더 거름) 받는다.
 - **고르는 법**: 지역·분류마다 최근 수정순으로 받아, 시군구를 번갈아 가며 맛집·볼거리 8곳, 숙소 10곳을 고른다. 시군구 id는 앱이 주소(`서울특별시 강남구`)에서 매핑한다(`src/data/sigungu.ts`의 `findSigungu`).
 
-- **실패해도 사이트는 그대로**: 연결 오류·429·5xx는 백오프로 재시도한다. 그래도 실패했거나 0건인 지역·분류는 기존 데이터를 유지하고, 전부 실패하면 파일을 쓰지 않는다.
+- **실패해도 사이트는 그대로**: 연결 오류·429·5xx는 백오프로 재시도한다. 그래도 실패했거나 0건인 지역·분류는 기존 데이터를 유지하고, 전부 실패하면 파일을 쓰지 않는다. 받은 곳이 기존 저장 수보다 적으면 기존 장소로 채워 저장 수가 줄지 않게 한다(요약 수치는 실제 응답 그대로).
+- **좌표 검사**: 대한민국 범위 밖이거나 지역 시군구에서 너무 먼(도 120km·광역시와 경주 40km) 장소는 저장하지 않고 상태 파일의 `coordSkipped`에 남긴다.
+- **로그**: 지역·분류마다 `[seoul] attr: 응답 N건 · 요약 attrCount 이전→이번 · 저장 이전→이번곳` 한 줄.
 - **알림은 조치가 필요할 때만**: 키 오류(만료·미등록·쿼터 초과 등)나 약 3주 연속 전체 실패일 때만 워크플로가 실패해 GitHub 메일이 온다. 일시 네트워크 오류는 경고만 남긴다.
-- **상태 기록**: `src/data/sync-status.json`(마지막 시도 시각·결과·유지한 지역). 데이터가 바뀔 때 함께 커밋하고, 커밋이 50일 넘게 없으면 이 파일만 커밋해 예약 워크플로가 60일 비활성 규칙으로 꺼지지 않게 한다.
+- **상태 기록**: `src/data/sync-status.json`(마지막 시도 시각·결과·법정동 코드 출처·유지/보충한 지역·좌표 제외 장소). 데이터가 바뀔 때 함께 커밋하고, 커밋이 50일 넘게 없으면 이 파일만 커밋해 예약 워크플로가 60일 비활성 규칙으로 꺼지지 않게 한다.
 - **키 연장**(개발계정 활용기간, 통상 2년): data.go.kr → 마이페이지 → 개발계정 → 활용기간 연장 신청. 키 값이 바뀌었으면 GitHub Secrets(와 등록했다면 Vercel env)의 `TOURAPI_KEY`를 갱신하고, Actions에서 워크플로를 수동 실행해 확인한다.
 
 ## 🔒 보안 상태
 
-`npm audit --omit=dev` 기준으로 관리한다. 마지막 점검일은 2026-09-30 — **0건**.
+`npm audit --omit=dev` 기준으로 관리한다. 마지막 점검일은 2026-11-16 — **1건(zod, 아래 완화 조치)**.
 
 | 항목 | 상태 |
 |---|---|
 | Next.js 직접 권고(SSRF·DoS·캐시 혼동·서버 함수 노출 등 8건) | ✅ 해소 (15.5.23) |
 | Next.js 원격 코드 실행 2건(이미지 최적화 AVIF [GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4), Windows 호스트 [GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36)) | ✅ 해소 (15.5.26 — 15.5.24부터 패치) |
+| Next.js SSG/ISR 캐시 오염 2건·이미지 최적화 SVG 원격 코드 실행·Server Actions DoS ([GHSA-4jqv-mc3x-m676](https://github.com/advisories/GHSA-4jqv-mc3x-m676) 외) | ✅ 해소 (15.5.29) |
+| source-map-js ([GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q)) | ✅ 해소 (1.2.2, 잠금 파일) |
+| zod 큰 배열 검증 메모리 소진 ([GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)) | ⚠️ 남음 — 수정은 4.6.6에만 있고 3.x 전체가 해당. `/api/course` 본문 8KB 제한(413)으로 큰 입력이 검증까지 가지 않게 막고, 입력 스키마의 문자열·배열에 상한을 둠. zod 4 이전 때 해소 |
 | postcss(직접 의존) | ✅ 해소 (8.5.23+) |
 | nanoid · sharp | ✅ 해소 (overrides로 패치 버전 고정, sharp는 libheif 권고 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c) 때문에 0.35.4+) |
 | next 내부에 중첩된 postcss 8.4.31 | ✅ 해소 (overrides로 직접 의존 postcss와 같은 버전 사용) |
@@ -178,7 +183,7 @@ docs/             # PRD·IA·analysis/*·design/*·deployment·review (SDLC 산�
 
 ## 🗺 로드맵
 
-- tourAPI areaCode 매핑 실검증 및 자동 보강 워크플로우
+- 런타임 tourAPI 폴백(`src/lib/tourapi.ts` searchKeyword2)도 법정동 코드로 전환 — 주간 검증 로그의 areaCode/lDongRegnCd 건수 비교를 보고 결정
 - 실제 숙소 live 데이터 품질 향상 (온천/사우나 보유 추론 정교화)
 - 코스 지도 시각화 (이동 동선)
 - 사용자 코스 북마크/공유 확장

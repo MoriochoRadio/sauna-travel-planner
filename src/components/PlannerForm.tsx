@@ -5,7 +5,7 @@ import type { PlannerInput, Preference, Place } from "@/data/schema";
 import { getRegion } from "@/data/seed";
 import { getSigungus, type Sigungu } from "@/data/sigungu";
 import { shareUrl } from "@/data/share";
-import { ALL_REGIONS, REGION_LABELS } from "@/data/schema";
+import { ALL_REGIONS, NOTE_MAX, REGION_LABELS } from "@/data/schema";
 import { CourseView } from "./CourseView";
 import { CourseSkeleton } from "./CourseSkeleton";
 import { SaunaMap } from "./SaunaMap";
@@ -419,7 +419,7 @@ export function PlannerForm({ initialInput, autoSubmit }: { initialInput?: Plann
               className="field min-h-[72px] resize-none"
               placeholder="예: 겨울 방문, 차 없음, 아이 동반"
               value={note}
-              onChange={(e) => setNote(e.target.value.slice(0, 500))}
+              onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
               aria-label="특이사항"
             />
           </div>

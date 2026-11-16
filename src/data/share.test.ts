@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { decodeInputFromQuery, encodeInputToQuery, shareUrl } from "./share";
-import type { PlannerInput } from "./schema";
+import { NOTE_MAX, PlannerInputSchema, type PlannerInput } from "./schema";
 
 const input: PlannerInput = {
   region: "busan",
@@ -33,5 +33,16 @@ describe("공유 URL", () => {
     const url = shareUrl("https://example.com", input);
     expect(url.startsWith("https://example.com/?")).toBe(true);
     expect(decodeInputFromQuery(new URL(url).search.slice(1))).toEqual(input);
+  });
+
+  it("입력 스키마 상한을 넘는 링크도 열린다 — 긴 메모는 자르고 중복 취향은 한 번만", () => {
+    const qs = new URLSearchParams({
+      region: "busan", days: "1", note: "가".repeat(NOTE_MAX + 50),
+      prefs: Array(20).fill("quiet").join(","),
+    }).toString();
+    const decoded = decodeInputFromQuery(qs)!;
+    expect(decoded.note).toHaveLength(NOTE_MAX);
+    expect(decoded.preferences).toEqual(["quiet"]);
+    expect(PlannerInputSchema.safeParse(decoded).success).toBe(true);
   });
 });

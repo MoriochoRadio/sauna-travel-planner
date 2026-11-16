@@ -119,13 +119,19 @@ export const Preference = z.enum([
 export type Preference = z.infer<typeof Preference>;
 
 // ── 플래너 입력 ─────────────────────────────────────────────
+// 사용자 입력이 그대로 들어오는 스키마라 문자열·배열마다 상한을 둔다.
+// zod 3.x에는 길이 제한 없는 배열에 큰 입력을 넣으면 원소마다 오류 객체를 쌓아 메모리를
+// 소진하는 권고(GHSA-mrhx-c7xc-m3w5, 4.6.6에서만 수정)가 있다. 1차 방어는 /api/course의
+// 본문 크기 제한(read-json.ts)이고, 여기 상한은 정상 범위를 문서화하는 2차 방어다.
+export const NOTE_MAX = 500;                    // PlannerForm 특이사항 입력 상한과 같은 값
+export const ID_MAX = 100;                      // 시군구·장소 id (가장 긴 실값 ~45자)
 export const PlannerInputSchema = z.object({
   region: Region,
-  sigungu: z.string().optional(),              // 세부 시군구 id (지도/드롭다운 선택)
+  sigungu: z.string().max(ID_MAX).optional(),  // 세부 시군구 id (지도/드롭다운 선택)
   days: z.number().int().min(1).max(4),
-  preferences: z.array(Preference).default([]),
-  note: z.string().optional(),                 // 특이사항 자유텍스트
-  anchorSaunaId: z.string().optional(),        // 먼저 고른 핵심 사우나/온천 id
+  preferences: z.array(Preference).max(Preference.options.length).default([]),
+  note: z.string().max(NOTE_MAX).optional(),   // 특이사항 자유텍스트
+  anchorSaunaId: z.string().max(ID_MAX).optional(), // 먼저 고른 핵심 사우나/온천 id
   onsenFocus: z.boolean().default(false),      // 온천 중심 모드
   includeLodging: z.boolean().default(true),   // 온천/사우나 보유 숙소 추천 포함
 });

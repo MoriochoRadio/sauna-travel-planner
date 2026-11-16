@@ -1,4 +1,4 @@
-import type { PlannerInput, Preference } from "./schema";
+import { NOTE_MAX, type PlannerInput, type Preference } from "./schema";
 
 // 코스 설정(PlannerInput)을 짧은 URL 쿼리로 직렬화/복원
 const PREFS: Preference[] = ["quiet", "budget", "premium", "family", "solo", "outdoor_spa", "foodie"];
@@ -24,9 +24,11 @@ export function decodeInputFromQuery(qs: string): PlannerInput | null {
   const days = Number(daysRaw);
   if (!Number.isInteger(days) || days < 1 || days > 4) return null;
   const prefsRaw = p.get("prefs");
-  const preferences = (prefsRaw ? prefsRaw.split(",") : [])
+  // 중복은 한 번만 — 입력 스키마가 취향 개수에 상한을 두므로 "quiet,quiet,…" 링크도 열리게
+  const preferences = [...new Set(prefsRaw ? prefsRaw.split(",") : [])]
     .filter((x): x is Preference => (PREFS as string[]).includes(x));
-  const note = p.get("note") ?? undefined;
+  // 입력 스키마 상한(NOTE_MAX)보다 긴 공유 링크도 열리도록 잘라서 복원한다 (폼 입력과 같은 처리)
+  const note = p.get("note")?.slice(0, NOTE_MAX);
   const anchorSaunaId = p.get("sauna") ?? undefined;
   const onsenFocus = p.get("onsen") === "1";
   const includeLodging = p.get("lodging") !== "0";

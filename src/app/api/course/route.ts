@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PlannerInputSchema } from "@/data/schema";
 import { generateCourse } from "@/ai/engine";
 import { rateLimit, clientIp } from "../rate-limit";
+import { readJsonWithLimit } from "../read-json";
 
 export async function POST(req: NextRequest) {
   // CI/테스트 환경에서는 rate-limit 비활성화 (E2E 다중 요청 차단 방지)
@@ -9,14 +10,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
+  // 본문 크기를 먼저 막는다 — 큰 배열이 zod 검증까지 가지 않게 (read-json.ts 주석)
+  const read = await readJsonWithLimit(req);
+  if (!read.ok) return NextResponse.json({ error: read.error }, { status: read.status });
 
-  const parsed = PlannerInputSchema.safeParse(body);
+  const parsed = PlannerInputSchema.safeParse(read.body);
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.path[0];
     const code =
